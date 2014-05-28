@@ -16,11 +16,10 @@ cat <<EOF > public.xml
 		<plugin name="SqueezeCloud" version="$VERSION" minTarget="7.5" maxTarget="*">
 			<title lang="EN">SqueezeCloud</title>
 			<desc lang="EN">Browse, search and play urls from soundcloud</desc>
-			<url>http://grobbie.github.io/SqueezeCloud/SqueezeCloud.zip</url>
-			<link>https://github.com/grobbie/SqueezeCloud</link>
+			<url>http://danielvijge.github.io/SqueezeCloud/SqueezeCloud.zip</url>
+			<link>https://github.com/danielvijge/SqueezeCloud</link>
 			<sha>$SHA</sha>
-			<creator>Robert Gibbon, David Blackman</creator>
-			<email>robSPAMMENOTgibbon@me.com</email>
+			<creator>Daniel Vijge, Robert Gibbon, David Blackman</creator>
 		</plugin>
 	</plugins>
 </extensions>
