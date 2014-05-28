@@ -89,7 +89,8 @@ sub _makeMetadata {
 
 	my $icon = "";
 	if (defined $json->{'artwork_url'}) {
-		$icon = $json->{'artwork_url'};		
+		$icon = $json->{'artwork_url'};
+		$icon =~ s/-large/-t500x500/g;
 	}
 
   	my $DATA = {
@@ -419,6 +420,7 @@ sub _parsePlaylist {
   	}
 
 	my $icon = $entry->{'artwork_url'} || "";
+	$icon =~ s/-large/-t500x500/g;
 
   	$title .= " ($titleInfo)";	
 
