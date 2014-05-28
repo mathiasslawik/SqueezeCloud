@@ -2,7 +2,7 @@
 ----
 > Install via settings -> plugins -> third party sources -> 
 
-> http://grobbie.github.io/SqueezeCloud/public.xml
+> http://danielvijge.github.io/SqueezeCloud/public.xml
 
 *good to know*
 
