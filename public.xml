@@ -8,7 +8,7 @@
 			<desc lang="EN">Browse, search and play urls from soundcloud</desc>
 			<url>http://danielvijge.github.io/SqueezeCloud/SqueezeCloud.zip</url>
 			<link>https://github.com/danielvijge/SqueezeCloud</link>
-			<sha>4edc1bcea8a6be861edf4fb7064d2a2b322a40fa</sha>
+			<sha>063df53e3a8dd9e6cd01e92a00c201311755d0a5</sha>
 			<creator>Daniel Vijge, Robert Gibbon, David Blackman</creator>
 		</plugin>
 	</plugins>
