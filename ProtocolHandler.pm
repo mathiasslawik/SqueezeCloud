@@ -61,6 +61,7 @@ sub _makeMetadata {
     		name => $json->{'title'},
     		title => $json->{'title'},
     		artist => $json->{'user'}->{'username'},
+        album => " ",
     		#type => 'soundcloud',
     		#play => $stream,
     		#url  => $json->{'permalink_url'},
