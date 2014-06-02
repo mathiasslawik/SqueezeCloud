@@ -1,13 +1,12 @@
 set -x
 cd ..
 zip -r SqueezeCloud SqueezeCloud -x \*.zip \*.sh \*.git\* \*README\* \*webauth\*
-mv SqueezeCloud.zip SqueezeCloud
 cd SqueezeCloud
 
 VERSION=$(grep \<version\> install.xml  | perl -n -e '/>(.*)</; print $1;')
 SHA=$(shasum SqueezeCloud.zip | awk '{print $1;}')
 
-cat <<EOF > public.xml
+cat <<EOF > ../public.xml
 <extensions>
 	<details>
 		<title lang="EN">SqueezeCloud Plugin</title>
