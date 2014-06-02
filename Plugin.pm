@@ -94,13 +94,16 @@ sub _makeMetadata {
 	}
 
 	my $DATA = {
-		#duration => $json->{'duration'} / 1000,
+		duration => $json->{'duration'} / 1000,
 		name => $json->{'title'},
 		title => $json->{'title'},
 		artist => $json->{'user'}->{'username'},
+		album => " ",
 		play => "soundcloud://" . $json->{'id'},
 		#url  => $json->{'permalink_url'},
 		#link => "soundcloud://" . $json->{'id'},
+		bitrate => '128k',
+		type => 'MP3 stream (soundcloud.com)',
 		icon => $icon,
 		image => $icon,
 		cover => $icon,
