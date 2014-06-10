@@ -19,7 +19,6 @@ use Slim::Utils::Cache;
 use Scalar::Util qw(blessed);
 
 my $log   = logger('plugin.squeezecloud');
-my $prefs = preferences('plugin.squeezecloud');
 
 my %fetching; # hash of ids we are fetching metadata for to avoid multiple fetches
 
@@ -30,6 +29,8 @@ use base 'Slim::Player::Protocols::HTTP';
 
 my $CLIENT_ID = "112d35211af80d72c8ff470ab66400d8";
 my $prefs = preferences('plugin.squeezecloud');
+
+$prefs->init({ apiKey => "", playmethod => "stream" });
 
 sub canSeek { 1 }
 
@@ -54,7 +55,7 @@ sub addClientId {
 sub _makeMetadata {
 	my ($json) = shift;
 
-	my $stream = addClientId($json->{'stream_url'});
+	my $stream = addClientId(getStreamURL($json));
 	$stream =~ s/https/http/;
 
 	my $DATA = {
@@ -74,6 +75,17 @@ sub _makeMetadata {
 		image => getBetterArtworkURL($json->{'artwork_url'} || ""),
 		cover => getBetterArtworkURL($json->{'artwork_url'} || ""),
 	};
+}
+
+sub getStreamURL {
+	my $json = shift;
+
+	if ($prefs->get('playmethod') eq 'download' && exists($json->{'download_url'})) {
+		return $json->{'download_url'};
+	}
+	else {
+		return $json->{'stream_url'};
+	}
 }
 
 sub getBetterArtworkURL {
@@ -118,7 +130,7 @@ sub gotNextTrack {
 	# Save metadata for this track
 	$song->pluginData( $track );
 
-	my $stream = addClientId($track->{'stream_url'});
+	my $stream = addClientId(getStreamURL($track));
 	$stream =~ s/https/http/;
 	$log->info($stream);
 

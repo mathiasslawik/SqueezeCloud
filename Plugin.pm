@@ -53,7 +53,7 @@ BEGIN {
 
 my $prefs = preferences('plugin.squeezecloud');
 
-$prefs->init({ apiKey => "" });
+$prefs->init({ apiKey => "", playmethod => "stream" });
 
 sub defaultMeta {
 	my ( $client, $url ) = @_;
@@ -84,7 +84,7 @@ sub addClientId {
 sub _makeMetadata {
 	my ($json) = shift;
 
-	my $stream = addClientId($json->{'stream_url'});
+	my $stream = addClientId(getStreamURL($json));
 	$stream =~ s/https/http/;
 
 	my $icon = "";
@@ -161,7 +161,7 @@ sub _gotMetadata {
 		requests_redirectable => [],
 	);
 
-	my $res = $ua->get( addClientId($json->{'stream_url'}) );
+	my $res = $ua->get( addClientId(getStreamURL($json)) );
 
 	my $stream = $res->header( 'location' );
 
@@ -170,11 +170,22 @@ sub _gotMetadata {
 		my %DATA2 = %$DATA;
 		my %DATA3 = %$DATA;
 		$METADATA_CACHE{$1} = \%DATA1;
-		$METADATA_CACHE{$json->{'stream_url'}} = \%DATA2;
-		$METADATA_CACHE{addClientId($json->{'stream_url'})} = \%DATA3;
+		$METADATA_CACHE{getStreamURL($json)} = \%DATA2;
+		$METADATA_CACHE{addClientId(getStreamURL($json))} = \%DATA3;
 	}
 
 	return;
+}
+
+sub getStreamURL {
+	my $json = shift;
+
+	if ($prefs->get('playmethod') eq 'download' && exists($json->{'download_url'})) {
+		return $json->{'download_url'};
+	}
+	else {
+		return $json->{'stream_url'};
+	}
 }
 
 sub fetchMetadata {

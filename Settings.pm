@@ -14,7 +14,7 @@ sub page {
 }
 
 sub prefs {
-	return (preferences('plugin.squeezecloud'), qw(apiKey));
+	return (preferences('plugin.squeezecloud'), qw(apiKey playmethod));
 }
 
 1;
