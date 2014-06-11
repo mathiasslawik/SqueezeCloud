@@ -1,5 +1,12 @@
 package Plugins::SqueezeCloud::ProtocolHandler;
 
+# Plugin to stream audio from SoundCloud streams
+#
+# Released under GNU General Public License version 2 (GPLv2)
+# Written by David Blackman (first release), Robert Gibbon (improvements),
+#   Daniel Vijge (improvements)
+# See file LICENSE for full license details
+
 use strict;
 
 use base qw(Slim::Player::Protocols::HTTP);
