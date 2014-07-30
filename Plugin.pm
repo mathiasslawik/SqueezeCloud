@@ -477,7 +477,7 @@ sub _parseFriend {
 	};
 
 	push @$menu, {
-		name => sprintf("%d Tracks", $favorite_count),
+		name => sprintf("%d Tracks", $track_count),
 		icon => $image,
 		image => $image,
 		type => 'playlist',
