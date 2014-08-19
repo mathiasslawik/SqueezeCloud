@@ -148,6 +148,7 @@ sub gotNextTrack {
 	my $res = $ua->get($stream);
 
 	my $redirector = $res->header( 'location' );
+	$redirector =~ s/https/http/; 
 
 	$song->streamUrl($redirector);
 
