@@ -15,7 +15,7 @@ cat <<EOF > public.xml
 		<plugin name="SqueezeCloud" version="$VERSION" minTarget="7.5" maxTarget="*">
 			<title lang="EN">SqueezeCloud</title>
 			<desc lang="EN">Browse, search and play urls from soundcloud</desc>
-			<url>http://danielvijge.github.io/SqueezeCloud/SqueezeCloud.zip</url>
+			<url>http://danielvijge.github.io/SqueezeCloud/SqueezeCloud-$VERSION.zip</url>
 			<link>https://github.com/danielvijge/SqueezeCloud</link>
 			<sha>$SHA</sha>
 			<creator>Daniel Vijge, Robert Gibbon, David Blackman</creator>
