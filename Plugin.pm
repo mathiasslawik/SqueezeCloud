@@ -42,15 +42,17 @@ my $CLIENT_ID = "112d35211af80d72c8ff470ab66400d8";
 
 my %METADATA_CACHE= {};
 
-
+# This is the entry point in the script
 BEGIN {
+	# Initialize the logging
 	$log = Slim::Utils::Log->addLogCategory({
 		'category'     => 'plugin.squeezecloud',
 		'defaultLevel' => 'DEBUG',
 		'description'  => string('PLUGIN_SQUEEZECLOUD'),
 	});   
 
-	# Always use OneBrowser version of XMLBrowser by using server or packaged version included with plugin
+	# Always use OneBrowser version of XMLBrowser by using server or packaged 
+	# version included with plugin
 	if (exists &Slim::Control::XMLBrowser::findAction) {
 		$log->info("using server XMLBrowser");
 		require Slim::Plugin::OPMLBased;
@@ -63,10 +65,13 @@ BEGIN {
 	}
 }
 
+# Get the data related to this plugin and preset certain variables with 
+# default values in case they are not set
 my $prefs = preferences('plugin.squeezecloud');
-
 $prefs->init({ apiKey => "", playmethod => "stream" });
 
+# Returns the default metadata for the track which is specified by the URL.
+# In this case only the track title that will be returned.
 sub defaultMeta {
 	my ( $client, $url ) = @_;
 	
@@ -75,6 +80,7 @@ sub defaultMeta {
 	};
 }
 
+# Adds the client ID or the API key to the end of the given URL
 sub addClientId {
 	my ($url) = shift;
 
@@ -93,6 +99,8 @@ sub addClientId {
 	return $decorated;
 }
 
+# Extracts the available metadata for a tracks from the JSON data. The data 
+# is cached and then returned to be presented to the user. 
 sub _makeMetadata {
 	my ($json) = shift;
 
@@ -134,6 +142,8 @@ sub _makeMetadata {
 	return \%DATA3;
 }
 
+# This method is called when the Slim::Networking::SimpleAsyncHTTP encountered 
+# an error or no http repsonse was received. 
 sub _gotMetadataError {
 	my $http   = shift;
 	my $client = $http->params('client');
@@ -152,13 +162,15 @@ sub _gotMetadataError {
 	$client->master->pluginData( webapimetadata => $meta );
 }
 
+# This method is called when the Slim::Networking::SimpleAsyncHTTP 
+# method has received a http response.
 sub _gotMetadata {
 	my $http      = shift;
 	my $client    = $http->params('client');
 	my $url       = $http->params('url');
 	my $content   = $http->content;
 
-
+    # Check if there is an error message from the last eval() operator
 	if ( $@ ) {
 		$http->error( $@ );
 		_gotMetadataError( $http );
@@ -192,6 +204,7 @@ sub _gotMetadata {
 	return;
 }
 
+# Returns either the stream URL or the download URL from the given JSON data. 
 sub getStreamURL {
 	my $json = shift;
 
@@ -211,6 +224,10 @@ sub fetchMetadata {
 		my $queryUrl = $url;
 		$queryUrl =~ s/\/stream/.json/;
 
+        # Call the server to fetch the data via the asynchronous http request. 
+        # The methods are called when a response was received or an error 
+        # occurred. Additional information to the http call is passed via 
+        # the hash (third parameter).
 		my $http = Slim::Networking::SimpleAsyncHTTP->new(
 			\&_gotMetadata,
 			\&_gotMetadataError,
@@ -236,22 +253,35 @@ sub _parseTracks {
 	}
 }
 
+# Main method that is called when the user selects a menu item. It is 
+# specified in the menu array by the key 'url'. The passthrough array 
+# contains the additional values that is passed to this method to 
+# differentiate what shall be done in here.
 sub tracksHandler {
 	my ($client, $callback, $args, $passDict) = @_;
 
+    # Get the index (offset) where to start fetching items
 	my $index    = ($args->{'index'} || 0); # ie, offset
+	
+	# The maximum amount of items to fetch
 	my $quantity = $args->{'quantity'} || API_MAX_ITEMS_PER_CALL;
+
 	my $searchType = $passDict->{'type'};
 	my $searchStr = ($searchType eq 'tags') ? "tags=$args->{search}" : "q=$args->{search}";
 	my $search   = $args->{'search'} ? $searchStr : '';
 
+    # The parser is the method that will be called when the 
+    # server has returned some data in the SimpleAsyncHTTP call.
 	my $parser = $passDict->{'parser'} || \&_parseTracks;
+
 	my $params = $passDict->{'params'} || '';
 
 	$log->warn('search type: ' . $searchType);
 	$log->warn("index: " . $index);
 	$log->warn("quantity: " . $quantity);
-	
+
+    # The new menu that will be shows when the server request has been 
+    # processed (the user has clicked something from the previous menu). 
 	my $menu = [];
 	
 	# fetch in stages as api only allows 50 items per response, cli clients require $quantity responses which can be more than 50
@@ -263,16 +293,24 @@ sub tracksHandler {
 		# in case we've already fetched some of this page, keep going
 		my $i = $index + scalar @$menu;
 		$log->warn("i: " . $i);
+
+		# Limit the amount of items to fetch because the API allows only a max 
+        # of 200 per response. See http://developers.soundcloud.com/docs#pagination
 		my $max = min($quantity - scalar @$menu, API_MAX_ITEMS_PER_CALL); # api allows max of 200 items per response
 		$log->warn("max: " . $max);
 
 		my $method = "https";
 		my $uid = $passDict->{'uid'} || '';
 
+        # If this is set to one then the user has provided the API key. This 
+        # is the case when the menu item in the toplevel method are active.
 		my $authenticated = 0;
 		my $extras = '';
 
 		my $resource = "tracks.json";
+		
+        # Check the given type (defined by the passthrough array). Depending 
+        # on the type certain URL parameters will be set. 
 		if ($searchType eq 'playlists') {
 			my $id = $passDict->{'pid'} || '';
 			$authenticated = 1;
@@ -329,6 +367,9 @@ sub tracksHandler {
 			$params .= "&filter=streamable";
 		}
 
+        # Add the API key to the URL. It should be non empty otherwise certain 
+        # top level menu items would not be visible and the search type value 
+        # would not have been passed into this method here.
 		if ($authenticated && $prefs->get('apiKey')) {
 			$method = "https";
 			$params .= "&oauth_token=" . $prefs->get('apiKey');
@@ -341,7 +382,7 @@ sub tracksHandler {
 		$log->warn("fetching: $queryUrl");
 		
 		Slim::Networking::SimpleAsyncHTTP->new(
-			
+			# Called when a response has been received for the request.
 			sub {
 				my $http = shift;
 				my $json = eval { from_json($http->content) };
@@ -392,7 +433,7 @@ sub tracksHandler {
 					total  => $total,
 				});
 			},
-			
+			# Called when no response was received or an error occurred.
 			sub {
 				$log->warn("error: $_[1]");
 				$callback->([ { name => $_[1], type => 'text' } ]);
@@ -407,25 +448,35 @@ sub tracksHandler {
 # TODO: make this async
 sub metadata_provider {
 	my ( $client, $url ) = @_;
-		
+
+    # Check if metadata has been already cached for the given item
 	if (exists $METADATA_CACHE{$url}) {
 		return $METADATA_CACHE{$url};
 	}
-	
+
+    # Check if the url matches the pattern, if yes check if metadata
+    # has been cached for the scalar in the one parenthesis set.
 	if ($url =~ /ak-media.soundcloud.com\/(.*\.mp3)/) {
 		return $METADATA_CACHE{$1};
 	} 
 	
 	if ( !$client->master->pluginData('webapifetchingMeta') ) {
-		# Fetch metadata in the background
+        # The fetchMetadata method will invoke an asynchronous http request. This will 
+        # start a timer that is linked with the method fetchMetadata. Kill any pending 
+        # or running request that is already active for the fetchMetadata method. 
 		Slim::Utils::Timers::killTimers( $client, \&fetchMetadata );
-			$client->master->pluginData( webapifetchingMeta => 1 );
+
+		# Start fetching new metadata in the background
+        $client->master->pluginData( webapifetchingMeta => 1 );
 		fetchMetadata( $client, $url );
 	}
 	
 	return defaultMeta( $client, $url );
 }
 
+# This method is called when the user has selected the last main menu where 
+# an URL can be entered manually. It will assemble the given URL and fetch 
+# the data from the server.
 sub urlHandler {
 	my ($client, $callback, $args) = @_;
 
@@ -461,16 +512,19 @@ sub urlHandler {
 	$fetch->();
 }
 
+# Get the tracks data from the JSON array and passes it to the parseTracks 
+# method which will then add a menu item for each track
 sub _parsePlaylistTracks {
 	my ($json, $menu) = @_;
 	_parseTracks($json->{'tracks'}, $menu, 1);
 }
 
+# Gets more information for the given playlist from the passed data and  
+# returns the menu item for it. 
 sub _parsePlaylist {
 	my ($entry) = @_;
-
-	my $title = $entry->{'title'};
-	$log->info($title);
+	
+	# Add information about the track count to the playlist menu item
 	my $numTracks = 0;
 	my $titleInfo = "";
 	if (exists $entry->{'tracks'}) {
@@ -478,6 +532,7 @@ sub _parsePlaylist {
 		$titleInfo .= "$numTracks tracks";
 	}
 
+    # Add information about the playlist play time
 	my $totalSeconds = ($entry->{'duration'} || 0) / 1000;
 	if ($totalSeconds != 0) {
 		my $minutes = int($totalSeconds / 60);
@@ -497,8 +552,11 @@ sub _parsePlaylist {
         $icon = "http://instafamous.net/image/cache/data/soundcloud-500x500.png";
     }
 
+    # Get the title and add the additional information to it
+    my $title = $entry->{'title'};
 	$title .= " ($titleInfo)";	
 
+    # Create the menu array
 	return {
 		name => $title,
 		type => 'playlist',
@@ -508,6 +566,8 @@ sub _parsePlaylist {
 	};
 }
 
+# Parses the available playlists from the JSON array and gets the information 
+# for each playlist. Each playlist will be added as a separate menu entry.
 sub _parsePlaylists {
 	my ($json, $menu) = @_;
 	for my $entry (@$json) {
@@ -515,6 +575,8 @@ sub _parsePlaylists {
 	}
 }
 
+# Shows the three available menu entries favorites, tracks and playlists 
+# with the received count information for a selected friend. 
 sub _parseFriend {
 	my ($entry, $menu) = @_;
 
@@ -554,6 +616,9 @@ sub _parseFriend {
 	};
 }
 
+# Goes through the list of available friends from the JSON data and parses the 
+# information for each friend (which is defined in the parseFriend method). 
+# Each friend is added as a separate menu entry.
 sub _parseFriends {
 	my ($json, $menu) = @_;
 
@@ -565,6 +630,7 @@ sub _parseFriends {
 		my $playlist_count = $entry->{'playlist_count'};
 		my $id = $entry->{'id'};
 
+        # Add the menu entry with the information for one friend.
 		push @$menu, {
 			name => sprintf("%s (%d favorites, %d tracks, %d sets)",
 			$name, $favorite_count, $track_count, $playlist_count),
@@ -630,9 +696,14 @@ sub _parseActivities {
 	}
 }
 
+# This is called when squeezebox server loads the plugin.
+# It is used to initialize variables and the like.
 sub initPlugin {
 	my $class = shift;
 
+    # Initialize the plugin with the given values. The 'feed' is the first
+    # method called. The available menu entries will be shown in the new 
+    # menu entry 'soundclound'. 
 	$class->SUPER::initPlugin(
 		feed   => \&toplevel,
 		tag    => 'squeezecloud',
@@ -656,27 +727,40 @@ sub initPlugin {
 	);
 }
 
+# Called when the plugin is stopped
 sub shutdownPlugin {
 	my $class = shift;
 }
 
+# Returns the name to display on the squeezebox
 sub getDisplayName { 'PLUGIN_SQUEEZECLOUD' }
 
 sub playerMenu { shift->can('nonSNApps') ? undef : 'RADIO' }
 
+# First method that is called after the plugin has been initialized. 
+# Creates the top level menu items that the plugin provides.
 sub toplevel {
 	my ($client, $callback, $args) = @_;
 
+    # These are the available main menus. The variable type defines the menu 
+    # type (search allows text input, link opens another menu), the url defines
+    # the method that shall be called when the user has selected the menu entry.
+    # The array passthrough holds additional parameters that is passed to the 
+    # method defined by the url variable.  
 	my $callbacks = [
+        # Menu entry 'Hottest tracks'
 		{ name => string('PLUGIN_SQUEEZECLOUD_HOT'), type => 'link',   
 			url  => \&tracksHandler, passthrough => [ { params => 'order=hotness' } ], },
 
+        # Menu entry 'New tracks' 
 		{ name => string('PLUGIN_SQUEEZECLOUD_NEW'), type => 'link',   
 			url  => \&tracksHandler, passthrough => [ { params => 'order=created_at' } ], },
 
+        # Menu entry 'Search'
 		{ name => string('PLUGIN_SQUEEZECLOUD_SEARCH'), type => 'search',   
 			url  => \&tracksHandler, passthrough => [ { params => 'order=hotness' } ], },
 
+        # Menu entry 'Tags'
 		{ name => string('PLUGIN_SQUEEZECLOUD_TAGS'), type => 'search',   
 			url  => \&tracksHandler, passthrough => [ { type => 'tags', params => 'order=hotness' } ], },
 
@@ -685,31 +769,39 @@ sub toplevel {
 		#    { name => string('PLUGIN_SOUNDCLOUD_PLAYLIST_BROWSE'), type => 'link',
 		#		  url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists } ] },
 
+        # Menu entry 'Playlists'
 		{ name => string('PLUGIN_SQUEEZECLOUD_PLAYLIST_SEARCH'), type => 'search',
 			url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists } ] },
 	];
 
+    # Add the following menu items only when the user has specified an API key
 	if ($prefs->get('apiKey') ne '') {
+		# Menu entry to show all activities
 		push(@$callbacks, 
 			{ name => string('PLUGIN_SQUEEZECLOUD_ACTIVITIES'), type => 'link',
 				url  => \&tracksHandler, passthrough => [ { type => 'activities', parser => \&_parseActivities} ] }
 		);
-
+        # Menu entry to show the users favorites
 		push(@$callbacks, 
 			{ name => string('PLUGIN_SQUEEZECLOUD_FAVORITES'), type => 'link',
 				url  => \&tracksHandler, passthrough => [ { type => 'favorites' } ] }
 		);
+		# Menu entry to show the 'frieds' the user is following
 		push(@$callbacks, 
 			{ name => string('PLUGIN_SQUEEZECLOUD_FRIENDS'), type => 'link',
 				url  => \&tracksHandler, passthrough => [ { type => 'friends', parser => \&_parseFriends} ] },
 		);
 	}
 
+    # Menu entry to enter an URL manually
 	push(@$callbacks, 
 		{ name => string('PLUGIN_SQUEEZECLOUD_URL'), type => 'search', url  => \&urlHandler, }
 	);
 
+    # Add the menu entries from the menu array. It is responsible for calling 
+    # the correct method (url) and passing any parameters.
 	$callback->($callbacks);
 }
 
+# Always end with a 1 to make Perl happy
 1;
