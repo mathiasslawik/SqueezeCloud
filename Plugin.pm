@@ -314,6 +314,17 @@ sub tracksHandler {
 		} elsif ($searchType eq 'activities') {
 			$authenticated = 1;
 			$resource = "me/activities/all.json";
+
+			# The activities call does not honor the offset, only the limit 
+			# parameter, which is specified by the quantity variable. Add the 
+			# limit only when it is not 1 to get all activities. This shall
+			# only be done when the user has selected the dashboard menu item.
+			# When an item from the result list is selected, omit the limit 
+			# parameter. 
+            if ($quantity > 1) {
+                $extras = "limit=$quantity&";
+            }
+
 		} else {
 			$params .= "&filter=streamable";
 		}
@@ -334,8 +345,26 @@ sub tracksHandler {
 			sub {
 				my $http = shift;
 				my $json = eval { from_json($http->content) };
-				
-				$parser->($json, $menu); 
+
+                # The activities call does not honor the offset, only the limit parameter. 
+                # If the limit is one the first entry of the activities will be returned, 
+                # regardless of the offset. This prevents getting the correct list item.
+                # So get always all activities and parse only the item from the collection 
+                # that matches the selected list item.  
+                if ($searchType eq 'activities' && $quantity == 1) {
+                    my $collection = $json->{'collection'};
+                    my $i = 0;
+                    for my $entry (@$collection) {
+                        if ($i == $index) {
+                            # Parse the single item
+                            _parseActivity($entry, $menu);
+                        }
+                        $i++;
+                    }
+                } else {
+                    # Use the specified parser method for all other calls.
+                    $parser->($json, $menu);
+                }
 	
 				# max offset = 8000, max index = 200 sez soundcloud http://developers.soundcloud.com/docs#pagination
 				my $total = API_MAX_ITEMS + $quantity;
@@ -548,45 +577,56 @@ sub _parseFriends {
 	}
 }
 
+# Parses the given data. If the data is a playlist the number of tracks and 
+# some additional data will be retrieved. The playlist or if the data is a 
+# track will then be shown as a menu item. 
+sub _parseActivity {
+    my ($entry, $menu) = @_;
+
+    my $created_at = $entry->{'created_at'};
+    my $origin = $entry->{'origin'};
+    my $tags = $entry->{'tags'};
+    my $type = $entry->{'type'};
+
+    if ($type =~ /playlist.*/) {
+        my $playlistItem = _parsePlaylist($origin);
+        my $user = $origin->{'user'};
+        my $user_name = $user->{'full_name'} || $user->{'username'};
+
+        $playlistItem->{'name'} = $playlistItem->{'name'} . " shared by " . $user_name;
+        push @$menu, $playlistItem;
+    } else {
+        my $track = $origin->{'track'} || $origin;
+        my $user = $origin->{'user'} || $track->{'user'};
+        my $user_name = $user->{'full_name'} || $user->{'username'};
+        $track->{'artist_sqz'} = $user_name;
+
+        my $subtitle = "";
+        if ($type eq "favoriting") {
+            $subtitle = "favorited by $user_name";
+        } elsif ($type eq "comment") {
+            $subtitle = "commented on by $user_name";
+        } elsif ($type =~ /track/) {
+            $subtitle = "new track by $user_name";
+        } else {
+            $subtitle = "shared by $user_name";
+        }
+
+        my $trackentry = _makeMetadata($track);
+        $trackentry->{'name'} = $track->{'title'} . " " . $subtitle;
+
+        push @$menu, $trackentry;
+    }
+}
+
+# Parses all available items in the collection. 
+# Each item can either be a playlist or a track.
 sub _parseActivities {
 	my ($json, $menu) = @_;
 	my $collection = $json->{'collection'};
 
 	for my $entry (@$collection) {
-		my $created_at = $entry->{'created_at'};
-		my $origin = $entry->{'origin'};
-		my $tags = $entry->{'tags'};
-		my $type = $entry->{'type'};
-
-		if ($type =~ /playlist.*/) {
-			my $playlistItem = _parsePlaylist($origin);
-			my $user = $origin->{'user'};
-			my $user_name = $user->{'full_name'} || $user->{'username'};
-
-			$playlistItem->{'name'} = $playlistItem->{'name'} . " shared by " . $user_name;
-			push @$menu, $playlistItem;
-		} else {
-			my $track = $origin->{'track'} || $origin;
-			my $user = $origin->{'user'} || $track->{'user'};
-			my $user_name = $user->{'full_name'} || $user->{'username'};
-			$track->{'artist_sqz'} = $user_name;
-
-			my $subtitle = "";
-			if ($type eq "favoriting") {
-				$subtitle = "favorited by $user_name";
-			} elsif ($type eq "comment") {
-				$subtitle = "commented on by $user_name";
-			} elsif ($type =~ /track/) {
-				$subtitle = "new track by $user_name";
-			} else {
-				$subtitle = "shared by $user_name";
-			}
-
-			my $trackentry = _makeMetadata($track);
-			$trackentry->{'name'} = $track->{'title'} . " " . $subtitle;
-
-			push @$menu, $trackentry;
-		}
+		_parseActivity($entry, $menu);
 	}
 }
 
