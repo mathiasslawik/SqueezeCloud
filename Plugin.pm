@@ -288,8 +288,7 @@ sub tracksHandler {
 			}
 			$extras = "offset=$i&limit=$quantity&";
 
-		}
-		if ($searchType eq 'tracks') {
+		} elsif ($searchType eq 'tracks') {
 			$authenticated = 1;
 			$resource = "users/$uid/tracks.json";
 			$extras = "offset=$i&limit=$quantity&";
