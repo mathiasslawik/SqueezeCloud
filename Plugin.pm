@@ -23,10 +23,6 @@ use Slim::Utils::Strings qw(string);
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
 
-use Data::Dumper;
-
-use Plugins::SqueezeCloud::ProtocolHandler;
-
 my $log;
 my $compat;
 my $CLIENT_ID = "112d35211af80d72c8ff470ab66400d8";
@@ -498,7 +494,6 @@ sub _parseFriend {
 
 sub _parseFriends {
 	my ($json, $menu) = @_;
-	my $i = 0;
 
 	for my $entry (@$json) {
 		my $image = $entry->{'avatar_url'};
