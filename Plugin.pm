@@ -99,10 +99,13 @@ sub _makeMetadata {
 	my $stream = addClientId(getStreamURL($json));
 	$stream =~ s/https/http/;
 
+    # Get the icon from the artwork_url. If no url is defined, set the default icon.
 	my $icon = "";
 	if (defined $json->{'artwork_url'}) {
 		$icon = $json->{'artwork_url'};
 		$icon =~ s/-large/-t500x500/g;
+	} else {
+		$icon = "http://instafamous.net/image/cache/data/soundcloud-500x500.png";
 	}
 
 	my $DATA = {
@@ -445,8 +448,14 @@ sub _parsePlaylist {
 		$titleInfo .= "${minutes}m${seconds}s";
 	}
 
-	my $icon = $entry->{'artwork_url'} || "";
-	$icon =~ s/-large/-t500x500/g;
+    # Get the icon from the artwork_url. If no url is defined, set the default icon.
+    my $icon = "";
+    if (defined $entry->{'artwork_url'}) {
+        $icon = $entry->{'artwork_url'};
+        $icon =~ s/-large/-t500x500/g;
+    } else {
+        $icon = "http://instafamous.net/image/cache/data/soundcloud-500x500.png";
+    }
 
 	$title .= " ($titleInfo)";	
 
