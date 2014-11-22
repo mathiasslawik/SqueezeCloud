@@ -335,7 +335,7 @@ sub tracksHandler {
 
 		# Limit the amount of items to fetch because the API allows only a max 
         # of 200 per response. See http://developers.soundcloud.com/docs#pagination
-		my $max = min($quantity - scalar @$menu, API_MAX_ITEMS_PER_CALL); # api allows max of 200 items per response
+		my $max = min($quantity - scalar @$menu, API_MAX_ITEMS_PER_CALL);
 		$log->warn("max: " . $max);
         $quantity = $max;
 
