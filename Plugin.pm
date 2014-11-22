@@ -337,6 +337,7 @@ sub tracksHandler {
         # of 200 per response. See http://developers.soundcloud.com/docs#pagination
 		my $max = min($quantity - scalar @$menu, API_MAX_ITEMS_PER_CALL); # api allows max of 200 items per response
 		$log->warn("max: " . $max);
+        $quantity = $max;
 
 		my $method = "https";
 		my $uid = $passDict->{'uid'} || '';
