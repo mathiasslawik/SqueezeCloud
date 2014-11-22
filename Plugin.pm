@@ -423,15 +423,18 @@ sub tracksHandler {
 			 
 				# awful hack
 				if ($searchType eq 'friend' && (defined $args->{'index'})) {
-					my @tmpmenu = $menu->[$index];
-					$menu = \@tmpmenu;
+					$callback->({
+                        items  => $menu,
+                        offset => 0,
+                        total  => $total,
+                    });
+				} else {
+					$callback->({
+						items  => $menu,
+						offset => $index,
+						total  => $total,
+					});
 				}
-		
-				$callback->({
-					items  => $menu,
-					offset => $index,
-					total  => $total,
-				});
 			},
 			# Called when no response was received or an error occurred.
 			sub {
