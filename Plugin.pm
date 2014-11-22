@@ -23,6 +23,19 @@ use Slim::Utils::Strings qw(string);
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
 
+# Defines the timeout in seconds for a http request
+use constant HTTP_TIMEOUT => 15;
+
+# The maximum items that can be fetched via the API in one call
+use constant API_MAX_ITEMS_PER_CALL => 200;
+
+# The default number of items to fetch in one API call
+use constant API_DEFAULT_ITEMS_COUNT => 30;
+
+# The maximum value that can be fetched via the API. This means that no more 
+# than 8000 + 200 items can exist in a menu list.
+use constant API_MAX_ITEMS => 500;
+
 my $log;
 my $compat;
 my $CLIENT_ID = "112d35211af80d72c8ff470ab66400d8";
@@ -201,7 +214,7 @@ sub fetchMetadata {
 			{
 				client     => $client,
 				url        => $url,
-				timeout    => 30,
+				timeout    => HTTP_TIMEOUT,
 			},
 		);
 
@@ -224,7 +237,7 @@ sub tracksHandler {
 	my ($client, $callback, $args, $passDict) = @_;
 
 	my $index    = ($args->{'index'} || 0); # ie, offset
-	my $quantity = $args->{'quantity'} || 200;
+	my $quantity = $args->{'quantity'} || API_MAX_ITEMS_PER_CALL;
 	my $searchType = $passDict->{'type'};
 	my $searchStr = ($searchType eq 'tags') ? "tags=$args->{search}" : "q=$args->{search}";
 	my $search   = $args->{'search'} ? $searchStr : '';
@@ -247,7 +260,7 @@ sub tracksHandler {
 		# in case we've already fetched some of this page, keep going
 		my $i = $index + scalar @$menu;
 		$log->warn("i: " . $i);
-		my $max = min($quantity - scalar @$menu, 200); # api allows max of 200 items per response
+		my $max = min($quantity - scalar @$menu, API_MAX_ITEMS_PER_CALL); # api allows max of 200 items per response
 		$log->warn("max: " . $max);
 
 		my $method = "https";
@@ -265,7 +278,7 @@ sub tracksHandler {
 				$resource = "users/$uid/playlists.json";
 				if ($uid eq '') {
 					$resource = "playlists.json";
-					$quantity = 30;
+					$quantity = API_DEFAULT_ITEMS_COUNT;
 				}
 			}
 		}
@@ -311,7 +324,7 @@ sub tracksHandler {
 				$parser->($json, $menu); 
 	
 				# max offset = 8000, max index = 200 sez soundcloud http://developers.soundcloud.com/docs#pagination
-				my $total = 8000 + $quantity;
+				my $total = API_MAX_ITEMS + $quantity;
 				if (exists $passDict->{'total'}) {
 					$total = $passDict->{'total'}
 				}
