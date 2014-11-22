@@ -230,9 +230,9 @@ sub _parseTracks {
 	my ($json, $menu) = @_;
 
 	for my $entry (@$json) {
-		if ($entry->{'streamable'}) {
-				push @$menu, _makeMetadata($entry);
-		}
+#		if ($entry->{'streamable'}) {
+			push @$menu, _makeMetadata($entry);
+#		}
 	}
 }
 
