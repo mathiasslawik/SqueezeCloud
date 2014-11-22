@@ -270,6 +270,8 @@ sub tracksHandler {
 		my $uid = $passDict->{'uid'} || '';
 
 		my $authenticated = 0;
+		my $extras = '';
+
 		my $resource = "tracks.json";
 		if ($searchType eq 'playlists') {
 			my $id = $passDict->{'pid'} || '';
@@ -284,22 +286,32 @@ sub tracksHandler {
 					$quantity = API_DEFAULT_ITEMS_COUNT;
 				}
 			}
+			$extras = "offset=$i&limit=$quantity&";
+
 		}
 		if ($searchType eq 'tracks') {
 			$authenticated = 1;
 			$resource = "users/$uid/tracks.json";
+			$extras = "offset=$i&limit=$quantity&";
+
 		} elsif ($searchType eq 'favorites') {
 			$authenticated = 1;
 			$resource = "users/$uid/favorites.json";
 			if ($uid eq '') {
 				$resource = "me/favorites.json";
 			}
+			$extras = "offset=$i&limit=$quantity&";
+
 		} elsif ($searchType eq 'friends') {
 			$authenticated = 1;
 			$resource = "me/followings.json";
+			$extras = "offset=$i&limit=$quantity&";
+
 		} elsif ($searchType eq 'friend') {
 			$authenticated = 1;
 			$resource = "users/$uid.json";
+			$extras = "offset=$i&limit=$quantity&";
+
 		} elsif ($searchType eq 'activities') {
 			$authenticated = 1;
 			$resource = "me/activities/all.json";
@@ -314,7 +326,7 @@ sub tracksHandler {
 			$params .= "&client_id=$CLIENT_ID";
 		}
 
-		my $queryUrl = "$method://api.soundcloud.com/$resource?offset=$i&limit=$quantity&" . $params . "&" . $search;
+        my $queryUrl = $method."://api.soundcloud.com/".$resource."?" . $extras . $params . "&" . $search;
 
 		$log->warn("fetching: $queryUrl");
 		
