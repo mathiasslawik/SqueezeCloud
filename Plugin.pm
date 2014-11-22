@@ -519,7 +519,7 @@ sub urlHandler {
 # method which will then add a menu item for each track
 sub _parsePlaylistTracks {
 	my ($json, $menu) = @_;
-	_parseTracks($json->{'tracks'}, $menu, 1);
+	_parseTracks($json->{'tracks'}, $menu);
 }
 
 # Gets more information for the given playlist from the passed data and  
