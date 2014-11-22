@@ -3,8 +3,10 @@ package Plugins::SqueezeCloud::Plugin;
 # Plugin to stream audio from SoundCloud streams
 #
 # Released under GNU General Public License version 2 (GPLv2)
-# Written by David Blackman (first release), Robert Gibbon (improvements),
-#   Daniel Vijge (improvements)
+# Written by David Blackman (first release), 
+#   Robert Gibbon (improvements),
+#   Daniel Vijge (improvements),
+#   Robert Siebert (improvements),
 # See file LICENSE for full license details
 
 use strict;
