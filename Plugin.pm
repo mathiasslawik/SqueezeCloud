@@ -70,6 +70,45 @@ BEGIN {
 my $prefs = preferences('plugin.squeezecloud');
 $prefs->init({ apiKey => "", playmethod => "stream" });
 
+# This is called when squeezebox server loads the plugin.
+# It is used to initialize variables and the like.
+sub initPlugin {
+    my $class = shift;
+
+    # Initialize the plugin with the given values. The 'feed' is the first
+    # method called. The available menu entries will be shown in the new 
+    # menu entry 'soundclound'. 
+    $class->SUPER::initPlugin(
+        feed   => \&toplevel,
+        tag    => 'squeezecloud',
+        menu   => 'radios',
+        is_app => $class->can('nonSNApps') ? 1 : undef,
+        weight => 10,
+    );
+
+    if (!$::noweb) {
+        require Plugins::SqueezeCloud::Settings;
+        Plugins::SqueezeCloud::Settings->new;
+    }
+
+    Slim::Formats::RemoteMetadata->registerProvider(
+        match => qr/soundcloud\.com/,
+        func => \&metadata_provider,
+    );
+
+    Slim::Player::ProtocolHandlers->registerHandler(
+        soundcloud => 'Plugins::SqueezeCloud::ProtocolHandler'
+    );
+}
+
+# Called when the plugin is stopped
+sub shutdownPlugin {
+    my $class = shift;
+}
+
+# Returns the name to display on the squeezebox
+sub getDisplayName { 'PLUGIN_SQUEEZECLOUD' }
+
 # Returns the default metadata for the track which is specified by the URL.
 # In this case only the track title that will be returned.
 sub defaultMeta {
@@ -698,45 +737,6 @@ sub _parseActivities {
 		_parseActivity($entry, $menu);
 	}
 }
-
-# This is called when squeezebox server loads the plugin.
-# It is used to initialize variables and the like.
-sub initPlugin {
-	my $class = shift;
-
-    # Initialize the plugin with the given values. The 'feed' is the first
-    # method called. The available menu entries will be shown in the new 
-    # menu entry 'soundclound'. 
-	$class->SUPER::initPlugin(
-		feed   => \&toplevel,
-		tag    => 'squeezecloud',
-		menu   => 'radios',
-		is_app => $class->can('nonSNApps') ? 1 : undef,
-		weight => 10,
-	);
-
-	if (!$::noweb) {
-		require Plugins::SqueezeCloud::Settings;
-		Plugins::SqueezeCloud::Settings->new;
-	}
-
-	Slim::Formats::RemoteMetadata->registerProvider(
-		match => qr/soundcloud\.com/,
-		func => \&metadata_provider,
-	);
-
-	Slim::Player::ProtocolHandlers->registerHandler(
-		soundcloud => 'Plugins::SqueezeCloud::ProtocolHandler'
-	);
-}
-
-# Called when the plugin is stopped
-sub shutdownPlugin {
-	my $class = shift;
-}
-
-# Returns the name to display on the squeezebox
-sub getDisplayName { 'PLUGIN_SQUEEZECLOUD' }
 
 sub playerMenu { shift->can('nonSNApps') ? undef : 'RADIO' }
 
