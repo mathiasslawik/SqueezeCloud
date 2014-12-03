@@ -1,3 +1,4 @@
+#!/bin/sh
 set -x
 
 VERSION=$(grep \<version\> install.xml  | perl -n -e '/>(.*)</; print $1;')
@@ -23,4 +24,3 @@ cat <<EOF > public.xml
 	</plugins>
 </extensions>
 EOF
-
