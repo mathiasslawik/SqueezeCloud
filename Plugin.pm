@@ -170,6 +170,7 @@ sub _makeMetadata {
 		icon => $icon,
 		image => $icon,
 		cover => $icon,
+		on_select => 'play',
 	};
  
 	my %DATA1 = %$DATA;
