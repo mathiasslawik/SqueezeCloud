@@ -5,7 +5,7 @@ SOUNDCLOUD
 	EN	SoundCloud
 
 PLUGIN_SQUEEZECLOUD_DESC
-	EN	Play music from Soundcloud. Supports top tracks, playlists and urls.
+	EN	Play music from SoundCloud. Supports top tracks, playlists and urls.
 
 PLUGIN_SQUEEZECLOUD_HOT
 	EN	Hottest Tracks
@@ -17,22 +17,13 @@ PLUGIN_SQUEEZECLOUD_URL
 	EN	SoundCloud URL
 
 PLUGIN_SQUEEZECLOUD_ACTIVITIES
-	EN	My Dashboard
+	EN	Stream
 
 PLUGIN_SQUEEZECLOUD_FAVORITES
-	EN	My Favorites
+	EN	Likes
 
 PLUGIN_SQUEEZECLOUD_FRIENDS
-	EN	My Friends
-
-PLUGIN_SQUEEZECLOUD_FRIENDS_FAVORITES
-	EN	My Friends' Favorites
-
-PLUGIN_SQUEEZECLOUD_FRIENDS_TRACKS
-	EN	My Friends' Tracks
-
-PLUGIN_SQUEEZECLOUD_FRIENDS_PLAYLIST
-	EN	My Friends' Playlists
+	EN	Following
 
 PLUGIN_SQUEEZECLOUD_SEARCH
 	EN	Search
@@ -41,7 +32,7 @@ PLUGIN_SQUEEZECLOUD_TAGS
 	EN	Search Tags
 
 PLUGIN_SQUEEZECLOUD_PLAYLIST_SEARCH
-	EN	Playlist Search
+	EN	Search Playlists
 
 PLUGIN_SQUEEZECLOUD_PLAYLIST_BROWSE
 	EN	Playlists
@@ -56,7 +47,7 @@ PLUGIN_SQUEEZECLOUD_PLAYMETHOD
 	EN	Play method
 
 PLUGIN_SQUEEZECLOUD_PLAYMETHOD_DESC
-	EN	Use stream method or download method to play files 
+	EN	Use stream method or download method to play tracks 
 	
 PLUGIN_SQUEEZECLOUD_STREAM_FAILED
 	EN	Connection error
