@@ -594,7 +594,7 @@ sub _parsePlaylist {
         $icon = $entry->{'artwork_url'};
         $icon =~ s/-large/-t500x500/g;
     } else {
-        $icon = "http://instafamous.net/image/cache/data/soundcloud-500x500.png";
+        $icon = "plugins/SqueezeCloud/icon.png";
     }
 
     # Get the title and add the additional information to it
