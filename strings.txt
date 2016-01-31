@@ -1,5 +1,5 @@
 PLUGIN_SQUEEZECLOUD
-	EN	SqueezeCloud
+	EN	SoundCloud
 
 SOUNDCLOUD
 	EN	SoundCloud
