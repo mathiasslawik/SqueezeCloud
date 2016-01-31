@@ -759,8 +759,9 @@ sub toplevel {
     # method defined by the url variable.  
 	my $callbacks = [
         # Menu entry 'Hottest tracks'
-		{ name => string('PLUGIN_SQUEEZECLOUD_HOT'), type => 'link',   
-			url  => \&tracksHandler, passthrough => [ { params => 'order=hotness' } ], },
+		# No longer working in API
+		#{ name => string('PLUGIN_SQUEEZECLOUD_HOT'), type => 'link',   
+		#	url  => \&tracksHandler, passthrough => [ { params => 'order=hotness' } ], },
 
         # Menu entry 'New tracks' 
 		{ name => string('PLUGIN_SQUEEZECLOUD_NEW'), type => 'link',   
@@ -780,8 +781,9 @@ sub toplevel {
 		#		  url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists } ] },
 
         # Menu entry 'Playlists'
-		{ name => string('PLUGIN_SQUEEZECLOUD_PLAYLIST_SEARCH'), type => 'search',
-			url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists } ] },
+		# No longer working in API
+		#{ name => string('PLUGIN_SQUEEZECLOUD_PLAYLIST_SEARCH'), type => 'search',
+		#	url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists } ] },
 	];
 
     # Add the following menu items only when the user has specified an API key
