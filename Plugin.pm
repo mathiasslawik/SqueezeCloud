@@ -361,7 +361,11 @@ sub tracksHandler {
 			if ($id eq '') {
 
 				$resource = "users/$uid/playlists.json";
-				if ($uid eq '') {
+				if ($search eq '') {
+					$resource = "me/playlists.json";
+					$quantity = API_DEFAULT_ITEMS_COUNT;
+                }
+                elsif ($uid eq '') {
 					$resource = "playlists.json";
 					$quantity = API_DEFAULT_ITEMS_COUNT;
 				}
@@ -787,6 +791,12 @@ sub toplevel {
 			{ name => string('PLUGIN_SQUEEZECLOUD_FAVORITES'), type => 'link',
 				url  => \&tracksHandler, passthrough => [ { type => 'favorites' } ] }
 		);
+
+		# Menu entry to show the 'playlists' the user is following
+        unshift(@$callbacks, 
+            { name => string('PLUGIN_SQUEEZECLOUD_PLAYLISTS'), type => 'link',
+                url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists} ] },
+        );
 
 		# Menu entry to show the 'frieds' the user is following
 		unshift(@$callbacks, 
