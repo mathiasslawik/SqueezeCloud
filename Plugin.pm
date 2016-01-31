@@ -782,21 +782,25 @@ sub toplevel {
 
     # Add the following menu items only when the user has specified an API key
 	if ($prefs->get('apiKey') ne '') {
-		# Menu entry to show all activities
-		push(@$callbacks, 
-			{ name => string('PLUGIN_SQUEEZECLOUD_ACTIVITIES'), type => 'link',
-				url  => \&tracksHandler, passthrough => [ { type => 'activities', parser => \&_parseActivities} ] }
-		);
-        # Menu entry to show the users favorites
-		push(@$callbacks, 
+		# Menu entry to show the users favorites
+		unshift(@$callbacks, 
 			{ name => string('PLUGIN_SQUEEZECLOUD_FAVORITES'), type => 'link',
 				url  => \&tracksHandler, passthrough => [ { type => 'favorites' } ] }
 		);
+
 		# Menu entry to show the 'frieds' the user is following
-		push(@$callbacks, 
+		unshift(@$callbacks, 
 			{ name => string('PLUGIN_SQUEEZECLOUD_FRIENDS'), type => 'link',
 				url  => \&tracksHandler, passthrough => [ { type => 'friends', parser => \&_parseFriends} ] },
 		);
+
+		# Menu entry to show all activities (Stream)
+		unshift(@$callbacks, 
+			{ name => string('PLUGIN_SQUEEZECLOUD_ACTIVITIES'), type => 'link',
+				url  => \&tracksHandler, passthrough => [ { type => 'activities', parser => \&_parseActivities} ] }
+		);
+        
+		
 	}
 
     # Menu entry to enter an URL manually
