@@ -671,7 +671,7 @@ sub _parseFriend {
 sub _parseFriends {
 	my ($json, $menu) = @_;
 
-	for my $entry (@$json) {
+	for my $entry (@{$json->{'collection'}}) {
 		my $image = $entry->{'avatar_url'};
 		my $name = $entry->{'full_name'} || $entry->{'username'};
 		my $favorite_count = $entry->{'public_favorites_count'};
