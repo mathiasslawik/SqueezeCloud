@@ -308,8 +308,8 @@ sub tracksHandler {
 	my $quantity = $args->{'quantity'} || API_MAX_ITEMS_PER_CALL;
 
 	my $searchType = $passDict->{'type'};
-	my $searchStr = ($searchType eq 'tags') ? "tags=$args->{search}" : "q=$args->{search}";
-	my $search   = $args->{'search'} ? $searchStr : '';
+	my $searchStr = ($searchType eq 'tags') ? "tags=" : "q=";
+	my $search   = $args->{'search'} ? $searchStr . URI::Escape::uri_escape_utf8($args->{'search'}) : '';
 
     # The parser is the method that will be called when the 
     # server has returned some data in the SimpleAsyncHTTP call.
@@ -359,12 +359,16 @@ sub tracksHandler {
 
 			$resource = "playlists/$id.json";
             if ($id eq '') {
-				if ($uid eq '') {
-                    $resource = "me/playlists.json";
+                if ($uid ne '') {
+                    $resource = "users/$uid/playlists.json";
+                    $quantity = API_DEFAULT_ITEMS_COUNT;
+                }
+                elsif ($search ne '') {
+                    $resource = "playlists.json";
                     $quantity = API_DEFAULT_ITEMS_COUNT;
                 }
                 else {
-					$resource = "users/$uid/playlists.json";
+					$resource = "me/playlists.json";
                     $quantity = API_DEFAULT_ITEMS_COUNT;
                 }
 			}
@@ -597,10 +601,7 @@ sub _parsePlaylist {
 	if ($totalSeconds != 0) {
 		my $minutes = int($totalSeconds / 60);
 		my $seconds = $totalSeconds % 60;
-		if (length($titleInfo) > 0) {
-			$titleInfo .= " ";
-		}
-		$titleInfo .= "${minutes}m${seconds}s";
+		$titleInfo .= ", ${minutes}m${seconds}s";
 	}
 
     # Get the icon from the artwork_url. If no url is defined, set the default icon.
@@ -608,8 +609,6 @@ sub _parsePlaylist {
     if (defined $entry->{'artwork_url'}) {
         $icon = $entry->{'artwork_url'};
         $icon =~ s/-large/-t500x500/g;
-    } else {
-        $icon = "plugins/SqueezeCloud/icon.png";
     }
 
     # Get the title and add the additional information to it
@@ -788,9 +787,8 @@ sub toplevel {
 		#		  url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists } ] },
 
         # Menu entry 'Playlists'
-		# No longer working in API
-		#{ name => string('PLUGIN_SQUEEZECLOUD_PLAYLIST_SEARCH'), type => 'search',
-		#	url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists } ] },
+		{ name => string('PLUGIN_SQUEEZECLOUD_PLAYLIST_SEARCH'), type => 'search',
+			url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists } ] },
 	];
 
     # Add the following menu items only when the user has specified an API key
