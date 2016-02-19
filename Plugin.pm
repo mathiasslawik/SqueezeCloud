@@ -165,8 +165,8 @@ sub _makeMetadata {
 		play => "soundcloud://" . $json->{'id'},
 		#url  => $json->{'permalink_url'},
 		#link => "soundcloud://" . $json->{'id'},
-		bitrate => '128k',
-		type => 'MP3 stream (soundcloud.com)',
+		bitrate => '320k',
+		type => 'MP3 (SoundCloud)',
 		icon => $icon,
 		image => $icon,
 		cover => $icon,
@@ -426,7 +426,7 @@ sub tracksHandler {
 
         my $queryUrl = $method."://api.soundcloud.com/".$resource."?" . $extras . $params . "&" . $search;
 
-		$log->warn("fetching: $queryUrl");
+		$log->debug("fetching: $queryUrl");
 		
 		Slim::Networking::SimpleAsyncHTTP->new(
 			# Called when a response has been received for the request.
