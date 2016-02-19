@@ -284,7 +284,6 @@ sub fetchMetadata {
 }
 
 sub _parseTracks {
-	$log->info("parsing tracks");
 	my ($json, $menu) = @_;
 
 	for my $entry (@$json) {
@@ -591,9 +590,9 @@ sub _parsePlaylist {
 	# Add information about the track count to the playlist menu item
 	my $numTracks = 0;
 	my $titleInfo = "";
-	if (exists $entry->{'tracks'}) {
-		$numTracks = scalar(@{$entry->{'tracks'}});
-		$titleInfo .= "$numTracks tracks";
+	if (exists $entry->{'tracks'} || exists $entry->{'track_count'}) {
+		$numTracks = exists $entry->{'tracks'} ? scalar(@{$entry->{'tracks'}}) : scalar($entry->{'track_count'});
+		$titleInfo .= "$numTracks " . lc(string('PLUGIN_SQUEEZECLOUD_TRACKS'));
 	}
 
     # Add information about the playlist play time
@@ -601,7 +600,10 @@ sub _parsePlaylist {
 	if ($totalSeconds != 0) {
 		my $minutes = int($totalSeconds / 60);
 		my $seconds = $totalSeconds % 60;
-		$titleInfo .= ", ${minutes}m${seconds}s";
+        if ($numTracks > 0) {
+            $titleInfo .= ", ";
+        }
+		$titleInfo .= "${minutes}m${seconds}s";
 	}
 
     # Get the icon from the artwork_url. If no url is defined, set the default icon.
@@ -646,33 +648,39 @@ sub _parseFriend {
 	my $playlist_count = $entry->{'playlist_count'};
 	my $id = $entry->{'id'};
 
-	push @$menu, {
-		name => sprintf("%d Favorites", $favorite_count),
-		icon => $image,
-		image => $image,
-		type => 'playlist',
-		url => \&tracksHandler,
-		passthrough => [ { type => 'favorites', uid => $id, max => $favorite_count }],
-	};
+	if ($favorite_count > 0) {
+        push @$menu, {
+    		name => string('PLUGIN_SQUEEZECLOUD_FAVORITES'),
+    		icon => $image,
+    		image => $image,
+    		type => 'playlist',
+    		url => \&tracksHandler,
+    		passthrough => [ { type => 'favorites', uid => $id, max => $favorite_count }],
+    	};
+    }
 
-	push @$menu, {
-		name => sprintf("%d Tracks", $track_count),
-		icon => $image,
-		image => $image,
-		type => 'playlist',
-		url => \&tracksHandler,
-		passthrough => [ { type => 'tracks', uid => $id, max => $track_count }],
-	};
+	if ($track_count > 0) {
+        push @$menu, {
+    		name => string('PLUGIN_SQUEEZECLOUD_TRACKS'),
+    		icon => $image,
+    		image => $image,
+    		type => 'playlist',
+    		url => \&tracksHandler,
+    		passthrough => [ { type => 'tracks', uid => $id, max => $track_count }],
+    	};
+    }
 
-	push @$menu, {
-		name => sprintf("%d Playlists", $playlist_count),
-		icon => $image,
-		image => $image,
-		type => 'link',
-		url => \&tracksHandler,
-		passthrough => [ { type => 'playlists', uid => $id, max => $playlist_count,
-		parser => \&_parsePlaylists } ]
-	};
+	if ($playlist_count > 0) {
+        push @$menu, {
+    		name => string('PLUGIN_SQUEEZECLOUD_PLAYLISTS'),
+    		icon => $image,
+    		image => $image,
+    		type => 'link',
+    		url => \&tracksHandler,
+    		passthrough => [ { type => 'playlists', uid => $id, max => $playlist_count,
+    		parser => \&_parsePlaylists } ]
+    	};
+    }
 }
 
 # Goes through the list of available friends from the JSON data and parses the 
@@ -714,7 +722,7 @@ sub _parseActivity {
         my $user = $origin->{'user'};
         my $user_name = $user->{'full_name'} || $user->{'username'};
 
-        $playlistItem->{'name'} = $playlistItem->{'name'} . " shared by " . $user_name;
+        $playlistItem->{'name'} = $playlistItem->{'name'} . " - " . sprintf(string('PLUGIN_SQUEEZECLOUD_STREAM_SHARED_BY') . " %s", $user_name);
         push @$menu, $playlistItem;
     } else {
         my $track = $origin->{'track'} || $origin;
@@ -724,17 +732,17 @@ sub _parseActivity {
 
         my $subtitle = "";
         if ($type eq "favoriting") {
-            $subtitle = "favorited by $user_name";
+            $subtitle = sprintf(string('PLUGIN_SQUEEZECLOUD_STREAM_FAVORITED_BY') . " %s", $user_name);
         } elsif ($type eq "comment") {
-            $subtitle = "commented on by $user_name";
+            $subtitle = sprintf(string('PLUGIN_SQUEEZECLOUD_STREAM_COMMETED_BY') . " %s", $user_name);
         } elsif ($type =~ /track/) {
-            $subtitle = "new track by $user_name";
+            $subtitle = sprintf(string('PLUGIN_SQUEEZECLOUD_STREAM_NEW_TRACK') . " %s", $user_name);
         } else {
-            $subtitle = "shared by $user_name";
+            $subtitle = sprintf(string('PLUGIN_SQUEEZECLOUD_STREAM_SHARED_BY') . " %s", $user_name);
         }
 
         my $trackentry = _makeMetadata($track);
-        $trackentry->{'name'} = $track->{'title'} . " " . $subtitle;
+        $trackentry->{'name'} = $track->{'title'} . " - " . $subtitle;
 
         push @$menu, $trackentry;
     }
