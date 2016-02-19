@@ -49,7 +49,7 @@ BEGIN {
 	# Initialize the logging
 	$log = Slim::Utils::Log->addLogCategory({
 		'category'     => 'plugin.squeezecloud',
-		'defaultLevel' => 'DEBUG',
+		'defaultLevel' => 'WARN',
 		'description'  => string('PLUGIN_SQUEEZECLOUD'),
 	});   
 
@@ -317,9 +317,9 @@ sub tracksHandler {
 
 	my $params = $passDict->{'params'} || '';
 
-	$log->warn('search type: ' . $searchType);
-	$log->warn("index: " . $index);
-	$log->warn("quantity: " . $quantity);
+	$log->debug('search type: ' . $searchType);
+	$log->debug("index: " . $index);
+	$log->debug("quantity: " . $quantity);
 
     # The new menu that will be shows when the server request has been 
     # processed (the user has clicked something from the previous menu). 
@@ -333,12 +333,12 @@ sub tracksHandler {
 	$fetch = sub {
 		# in case we've already fetched some of this page, keep going
 		my $i = $index + scalar @$menu;
-		$log->warn("i: " . $i);
+		$log->debug("i: " . $i);
 
 		# Limit the amount of items to fetch because the API allows only a max 
         # of 200 per response. See http://developers.soundcloud.com/docs#pagination
 		my $max = min($quantity - scalar @$menu, API_MAX_ITEMS_PER_CALL);
-		$log->warn("max: " . $max);
+		$log->debug("max: " . $max);
         $quantity = $max;
 
 		my $method = "https";
@@ -358,17 +358,15 @@ sub tracksHandler {
 			$authenticated = 1;
 
 			$resource = "playlists/$id.json";
-			if ($id eq '') {
-
-				$resource = "users/$uid/playlists.json";
-				if ($search eq '') {
-					$resource = "me/playlists.json";
-					$quantity = API_DEFAULT_ITEMS_COUNT;
+            if ($id eq '') {
+				if ($uid eq '') {
+                    $resource = "me/playlists.json";
+                    $quantity = API_DEFAULT_ITEMS_COUNT;
                 }
-                elsif ($uid eq '') {
-					$resource = "playlists.json";
-					$quantity = API_DEFAULT_ITEMS_COUNT;
-				}
+                else {
+					$resource = "users/$uid/playlists.json";
+                    $quantity = API_DEFAULT_ITEMS_COUNT;
+                }
 			}
 			$extras = "offset=$i&limit=$quantity&";
 
@@ -388,7 +386,7 @@ sub tracksHandler {
 		} elsif ($searchType eq 'friends') {
 			$authenticated = 1;
 			$resource = "me/followings.json";
-			$extras = "offset=$i&limit=$quantity&";
+			$extras = "offset=$i"; #&limit=$quantity&";
 
 		} elsif ($searchType eq 'friend') {
 			$authenticated = 1;
@@ -432,6 +430,19 @@ sub tracksHandler {
 			sub {
 				my $http = shift;
 				my $json = eval { from_json($http->content) };
+
+                # Special logic for retrieving one friend, because the limit
+                # and offset parameters are no longer supported by the API
+                if ($searchType eq 'friends' && $quantity == 1) {
+                    my $collection = $json->{'collection'};
+                    my $i = 0;
+                    for my $entry (@$collection) {
+                        if ($i == $index) {
+                            $json = { collection => [$entry]};
+                        }
+                        $i++;
+                    }
+                } 
 
                 # The activities call does not honor the offset, only the limit parameter. 
                 # If the limit is one the first entry of the activities will be returned, 
@@ -674,15 +685,11 @@ sub _parseFriends {
 	for my $entry (@{$json->{'collection'}}) {
 		my $image = $entry->{'avatar_url'};
 		my $name = $entry->{'full_name'} || $entry->{'username'};
-		my $favorite_count = $entry->{'public_favorites_count'};
-		my $track_count = $entry->{'track_count'};
-		my $playlist_count = $entry->{'playlist_count'};
 		my $id = $entry->{'id'};
 
         # Add the menu entry with the information for one friend.
 		push @$menu, {
-			name => sprintf("%s (%d favorites, %d tracks, %d sets)",
-			$name, $favorite_count, $track_count, $playlist_count),
+			name => $name,
 			icon => $image,
 			image => $image,
 			type => 'link',
