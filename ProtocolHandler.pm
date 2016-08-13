@@ -75,7 +75,7 @@ sub _makeMetadata {
 		#play => $stream,
 		#url  => $json->{'permalink_url'},
 		#link => "soundcloud://" . $json->{'id'},
-		bitrate   => '320k',
+		bitrate   => '320kbps',
 		type      => 'MP3 (SoundCloud)',
 		#info_link => $json->{'permalink_url'},
 		icon => getBetterArtworkURL($json->{'artwork_url'} || ""),
@@ -296,7 +296,8 @@ sub getMetadataFor {
 	#$log->debug( "Returning metadata for: $url" . ($meta ? '' : ': default') );
 
 	return $meta || {
-		type      => 'MP3 stream (soundcloud.com)',
+		bitrate   => '320kbps',
+		type      => 'MP3 (SoundCloud)',
 		icon      => $icon,
 		cover     => $icon,
 	};
