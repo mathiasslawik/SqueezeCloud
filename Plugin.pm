@@ -651,8 +651,6 @@ sub _parseFriend {
 	if ($favorite_count > 0) {
         push @$menu, {
     		name => string('PLUGIN_SQUEEZECLOUD_FAVORITES'),
-    		icon => $image,
-    		image => $image,
     		type => 'playlist',
     		url => \&tracksHandler,
     		passthrough => [ { type => 'favorites', uid => $id, max => $favorite_count }],
@@ -662,8 +660,6 @@ sub _parseFriend {
 	if ($track_count > 0) {
         push @$menu, {
     		name => string('PLUGIN_SQUEEZECLOUD_TRACKS'),
-    		icon => $image,
-    		image => $image,
     		type => 'playlist',
     		url => \&tracksHandler,
     		passthrough => [ { type => 'tracks', uid => $id, max => $track_count }],
@@ -673,8 +669,6 @@ sub _parseFriend {
 	if ($playlist_count > 0) {
         push @$menu, {
     		name => string('PLUGIN_SQUEEZECLOUD_PLAYLISTS'),
-    		icon => $image,
-    		image => $image,
     		type => 'link',
     		url => \&tracksHandler,
     		passthrough => [ { type => 'playlists', uid => $id, max => $playlist_count,
