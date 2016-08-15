@@ -39,7 +39,7 @@ my $prefs = preferences('plugin.squeezecloud');
 
 $prefs->init({ apiKey => "", playmethod => "stream" });
 
-sub canSeek { 1 }
+sub canSeek { 0 }
 
 sub addClientId {
 	my ($url) = shift;
