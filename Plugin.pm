@@ -79,7 +79,7 @@ sub initPlugin {
 
     # Initialize the plugin with the given values. The 'feed' is the first
     # method called. The available menu entries will be shown in the new 
-    # menu entry 'soundclound'. 
+    # menu entry 'soundcloud'. 
     $class->SUPER::initPlugin(
         feed   => \&toplevel,
         tag    => 'squeezecloud',
