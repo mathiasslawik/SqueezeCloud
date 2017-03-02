@@ -340,7 +340,7 @@ sub tracksHandler {
 		$log->debug("max: " . $max);
         $quantity = $max;
 
-		my $method = "https";
+		my $method = "http";
 		my $uid = $passDict->{'uid'} || '';
 
         # If this is set to one then the user has provided the API key. This 
@@ -418,7 +418,7 @@ sub tracksHandler {
         # top level menu items would not be visible and the search type value 
         # would not have been passed into this method here.
 		if ($authenticated && $prefs->get('apiKey')) {
-			$method = "https";
+			$method = "http";
 			$params .= "&oauth_token=" . $prefs->get('apiKey');
 		} else {
 			$params .= "&client_id=$CLIENT_ID";
