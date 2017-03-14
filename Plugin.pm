@@ -548,8 +548,9 @@ sub urlHandler {
 	$url =~ s/ com/.com/;
 	$url =~ s/www /www./;
 
-	# TODO: url escape this
+	$url = URI::Escape::uri_escape_utf8($url);
 	my $queryUrl = "http://api.soundcloud.com/resolve.json?url=$url&client_id=$CLIENT_ID";
+    $log->debug("fetching: $queryUrl");
 
 	my $fetch = sub {
 		Slim::Networking::SimpleAsyncHTTP->new(
