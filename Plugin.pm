@@ -70,7 +70,7 @@ BEGIN {
 # Get the data related to this plugin and preset certain variables with 
 # default values in case they are not set
 my $prefs = preferences('plugin.squeezecloud');
-$prefs->init({ apiKey => "", playmethod => "stream" });
+$prefs->init({ apiKey => "", playmethod => "stream", peerVerification => "enable" });
 
 # This is called when squeezebox server loads the plugin.
 # It is used to initialize variables and the like.
@@ -91,6 +91,22 @@ sub initPlugin {
     if (!$::noweb) {
         require Plugins::SqueezeCloud::Settings;
         Plugins::SqueezeCloud::Settings->new;
+    }
+
+    # Fix for Sonology devices where SSL is not working properly
+    # Suggested by erland: http://forums.slimdevices.com/showthread.php?92723-Soundcloud-plugin-for-squeezeserver&p=785794&viewfull=1#post785794
+    $log->info('Startup SSL verification setting: ' . $prefs->get('peerVerification'));
+
+    if(!$@ && IO::Socket::SSL->can("set_client_defaults")) {
+        # Only disable SSL peer verification if the user has explicitly disabled it through the plugin settings page
+        if($prefs->get('peerVerification') eq "disable") {
+            use IO::Socket::SSL;
+
+            $log->info('Disabling SSL verification');
+            IO::Socket::SSL::set_defaults(
+                SSL_verify_mode => SSL_VERIFY_NONE
+            );
+        }
     }
 
     Slim::Formats::RemoteMetadata->registerProvider(

@@ -19,4 +19,14 @@
 
 	[% END %]
 
+	[% WRAPPER setting title="PLUGIN_SQUEEZECLOUD_PEERVERIFICATION" desc="PLUGIN_SQUEEZECLOUD_PEERVERIFICATION_DESC" %]
+	<div class="prefDesc">
+		<select name="pref_peerVerification" class="stdedit">
+			<option[% IF prefs.peerVerification == 'enable' %] selected[% END %] value="enable">Enable SSL peer verification (default)</option>
+			<option[% IF prefs.peerVerification == 'disable' %] selected[% END %] value="disable">Disable SSL peer verification</option>
+		</select>
+	</div>
+
+	[% END %]
+
 [% PROCESS settings/footer.html %]

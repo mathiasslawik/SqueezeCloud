@@ -69,3 +69,9 @@ PLUGIN_SQUEEZECLOUD_STREAM_NEW_TRACK
 
 PLUGIN_SQUEEZECLOUD_STREAM_SHARED_BY
 	EN	shared by
+
+PLUGIN_SQUEEZECLOUD_PEERVERIFICATION
+	EN	SSL Peer verification
+
+PLUGIN_SQUEEZECLOUD_PEERVERIFICATION_DESC
+	EN	Disable SSL peer verification. If SqueezeCloud is not working, try to disable this. It is needed for Synology NAS devices, and maybe other devices as well. Warning: This will affect all of Logitech Media Server, including all plugins!

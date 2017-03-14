@@ -37,7 +37,7 @@ use base 'Slim::Player::Protocols::HTTP';
 my $CLIENT_ID = "112d35211af80d72c8ff470ab66400d8";
 my $prefs = preferences('plugin.squeezecloud');
 
-$prefs->init({ apiKey => "", playmethod => "stream" });
+$prefs->init({ apiKey => "", playmethod => "stream", peerVerification => "enable" });
 
 sub canSeek { 0 }
 
