@@ -249,7 +249,7 @@ sub _gotMetadata {
 sub getStreamURL {
 	my $json = shift;
 
-	if ($prefs->get('playmethod') eq 'download' && exists($json->{'download_url'})) {
+	if ($prefs->get('playmethod') eq 'download' && exists($json->{'download_url'}) && defined($json->{'download_url'}) && $json->{'downloadable'} eq '1') {
 		return $json->{'download_url'};
 	}
 	else {
