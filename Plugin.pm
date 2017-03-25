@@ -24,6 +24,7 @@ use List::Util qw(min max);
 use Slim::Utils::Strings qw(string);
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
+use Plugins::SqueezeCloud::SqueezeCloudAsyncHTTP;
 
 # Defines the timeout in seconds for a http request
 use constant HTTP_TIMEOUT => 15;
@@ -553,7 +554,7 @@ sub urlHandler {
     $log->debug("fetching: $queryUrl");
 
 	my $fetch = sub {
-		Slim::Networking::SimpleAsyncHTTP->new(
+		Plugins::SqueezeCloud::SqueezeCloudAsyncHTTP->new(
 			sub {
 				my $http = shift;
 				my $json = eval { from_json($http->content) };
