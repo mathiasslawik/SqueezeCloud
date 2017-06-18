@@ -473,6 +473,10 @@ sub tracksHandler {
 				if (exists $passDict->{'total'}) {
 					$total = $passDict->{'total'}
 				}
+
+                if ($searchType eq 'activities' && $quantity > 1) {
+                    $total = $quantity;
+                }
 				
 				$log->info("this page: " . scalar @$menu . " total: $total");
 
