@@ -3,9 +3,9 @@
 <extension>
 	<name>PLUGIN_SQUEEZECLOUD</name>
 	<module>Plugins::SqueezeCloud::Plugin</module>
-	<version>0.9.2</version>
+	<version>0.9.3</version>
 	<description>PLUGIN_SQUEEZECLOUD_DESC</description>
-	<icon>plugins/SqueezeCloud/icon.png</icon>
+	<icon>plugins/SqueezeCloud/html/images/icon.png</icon>
 	<defaultState>enabled</defaultState>
 	<targetApplication>
 		<id>SlimServer</id>
