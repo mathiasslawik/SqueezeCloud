@@ -9,7 +9,7 @@ package Plugins::SqueezeCloud::ProtocolHandler;
 
 use strict;
 
-use base qw(Slim::Player::Protocols::HTTP);
+use base qw(Slim::Player::Protocols::HTTPS);
 
 use List::Util qw(min max);
 use LWP::Simple;
@@ -62,9 +62,6 @@ sub addClientId {
 sub _makeMetadata {
 	my ($json) = shift;
 
-	my $stream = addClientId(getStreamURL($json));
-	$stream =~ s/https/http/;
-
 	my $DATA = {
 		duration => int($json->{'duration'} / 1000),
 		name => $json->{'title'},
@@ -72,7 +69,7 @@ sub _makeMetadata {
 		artist => $json->{'user'}->{'username'},
 		album => " ",
 		#type => 'soundcloud',
-		#play => $stream,
+		#play => addClientId(getStreamURL($json)),
 		#url  => $json->{'permalink_url'},
 		#link => "soundcloud://" . $json->{'id'},
 		bitrate   => '320kbps',
@@ -138,7 +135,6 @@ sub gotNextTrack {
 	$song->pluginData( $track );
 
 	my $stream = addClientId(getStreamURL($track));
-	$stream =~ s/https/http/;
 	$log->info($stream);
 
 	my $ua = LWP::UserAgent->new(
@@ -148,8 +144,6 @@ sub gotNextTrack {
 	my $res = $ua->get($stream);
 
 	my $redirector = $res->header( 'location' );
-	$redirector =~ s/https/http/; 
-
 	$song->streamUrl($redirector);
 
 	my $meta = _makeMetadata($track);

@@ -24,7 +24,6 @@ use List::Util qw(min max);
 use Slim::Utils::Strings qw(string);
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
-use Plugins::SqueezeCloud::SqueezeCloudAsyncHTTP;
 
 # Defines the timeout in seconds for a http request
 use constant HTTP_TIMEOUT => 15;
@@ -145,9 +144,6 @@ sub addClientId {
 # is cached and then returned to be presented to the user. 
 sub _makeMetadata {
 	my ($json) = shift;
-
-	my $stream = addClientId(getStreamURL($json));
-	$stream =~ s/https/http/;
 
     # Get the icon from the artwork_url.
     # Get the 500x500 high quality version, as specified in SoundCloud API.
@@ -558,7 +554,7 @@ sub urlHandler {
     $log->debug("fetching: $queryUrl");
 
 	my $fetch = sub {
-		Plugins::SqueezeCloud::SqueezeCloudAsyncHTTP->new(
+		Slim::Networking::SimpleAsyncHTTP->new(
 			sub {
 				my $http = shift;
 				my $json = eval { from_json($http->content) };
