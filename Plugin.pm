@@ -337,7 +337,7 @@ sub tracksHandler {
 		$log->debug("max: " . $max);
         $quantity = $max;
 
-		my $method = "http";
+		my $method = "https";
 		my $uid = $passDict->{'uid'} || '';
 
         # If this is set to one then the user has provided the API key. This 
@@ -415,7 +415,6 @@ sub tracksHandler {
         # top level menu items would not be visible and the search type value 
         # would not have been passed into this method here.
 		if ($authenticated && $prefs->get('apiKey')) {
-			$method = "http";
 			$params .= "&oauth_token=" . $prefs->get('apiKey');
 		} else {
 			$params .= "&client_id=$CLIENT_ID";
@@ -550,7 +549,7 @@ sub urlHandler {
 	$url =~ s/www /www./;
 
 	$url = URI::Escape::uri_escape_utf8($url);
-	my $queryUrl = "http://api.soundcloud.com/resolve.json?url=$url&client_id=$CLIENT_ID";
+	my $queryUrl = "https://api.soundcloud.com/resolve.json?url=$url&client_id=$CLIENT_ID";
     $log->debug("fetching: $queryUrl");
 
 	my $fetch = sub {

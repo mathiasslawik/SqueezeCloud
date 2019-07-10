@@ -172,7 +172,7 @@ sub getNextTrack {
 	my ($id) = $url =~ m{^soundcloud://(.*)$};
 		
 	# Talk to SN and get the next track to play
-	my $trackURL = addClientId("http://api.soundcloud.com/tracks/" . $id . ".json");
+	my $trackURL = addClientId("https://api.soundcloud.com/tracks/" . $id . ".json");
 		
 	my $http = Slim::Networking::SimpleAsyncHTTP->new(
 		\&gotNextTrack,
