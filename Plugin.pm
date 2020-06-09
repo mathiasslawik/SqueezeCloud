@@ -39,6 +39,9 @@ use constant API_DEFAULT_ITEMS_COUNT => 30;
 # than 8000 + 200 items can exist in a menu list.
 use constant API_MAX_ITEMS => 500;
 
+# Which URLs should we catch when pasted into the "Tune In URL" field?
+use constant PAGE_URL_REGEXP => qr{^https?://soundcloud\.com/};
+
 my $log;
 my $compat;
 my $CLIENT_ID = "112d35211af80d72c8ff470ab66400d8";
@@ -102,6 +105,10 @@ sub initPlugin {
     Slim::Player::ProtocolHandlers->registerHandler(
         soundcloud => 'Plugins::SqueezeCloud::ProtocolHandler'
     );
+
+	Slim::Player::ProtocolHandlers->registerURLHandler(
+	    PAGE_URL_REGEXP() => 'Plugins::SqueezeCloud::ProtocolHandler'
+	) if Slim::Player::ProtocolHandlers->can('registerURLHandler');
 }
 
 # Called when the plugin is stopped

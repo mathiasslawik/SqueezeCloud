@@ -320,4 +320,19 @@ sub handleDirectError {
 	$client->controller()->playerStreamingFailed( $client, 'PLUGIN_SQUEEZECLOUD_STREAM_FAILED' );
 }
 
+sub explodePlaylist {
+	my ( $class, $client, $uri, $callback ) = @_;
+
+	if ( $uri =~ Plugins::SqueezeCloud::Plugin::PAGE_URL_REGEXP ) {
+		Plugins::SqueezeCloud::Plugin::urlHandler(
+			$client,
+			sub { $callback->([map {$_->{'play'}} @{$_[0]->{'items'}}]) },
+			{'search' => $uri},
+		);
+	}
+	else {
+		$callback->([]);
+	}
+}
+
 1;
