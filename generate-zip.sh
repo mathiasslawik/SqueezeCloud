@@ -4,7 +4,7 @@ set -x
 VERSION=$(grep \<version\> install.xml  | perl -n -e '/>(.*)</; print $1;')
 
 cd ..
-zip -r SqueezeCloud-$VERSION.zip SqueezeCloud -x \*.zip \*.sh \*.git\* \*README\* \*webauth\* \*.sublime\* \*.DS_Store\*
+zip -r SqueezeCloud-$VERSION.zip SqueezeCloud -x \*.zip \*.sh \*.git\* \*README\* \*webauth\* \*.sublime\* \*.DS_Store\* \*.editorconfig
 SHA=$(shasum SqueezeCloud-$VERSION.zip | awk '{print $1;}')
 
 cat <<EOF > public.xml
