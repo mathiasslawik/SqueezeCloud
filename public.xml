@@ -3,12 +3,12 @@
 		<title lang="EN">SqueezeCloud Plugin</title>
 	</details>
 	<plugins>
-		<plugin name="SqueezeCloud" version="0.9.4" minTarget="7.5" maxTarget="*">
+		<plugin name="SqueezeCloud" version="0.9.5" minTarget="7.5" maxTarget="*">
 			<title lang="EN">SqueezeCloud</title>
 			<desc lang="EN">Browse, search and play urls from soundcloud</desc>
-			<url>http://danielvijge.github.io/SqueezeCloud/SqueezeCloud-0.9.4.zip</url>
+			<url>http://danielvijge.github.io/SqueezeCloud/SqueezeCloud-0.9.5.zip</url>
 			<link>https://github.com/danielvijge/SqueezeCloud</link>
-			<sha>aeac66d8a40230942968ff8f773bb5ce6c89093f</sha>
+			<sha>a1bbc721aa13c66f932b9e07419e39638a3941c8</sha>
 			<creator>Robert Siebert, Daniel Vijge, Robert Gibbon, David Blackman</creator>
 		</plugin>
 	</plugins>
