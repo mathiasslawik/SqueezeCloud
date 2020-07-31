@@ -24,7 +24,6 @@ use List::Util qw(min max);
 use Slim::Utils::Strings qw(string);
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
-use Plugins::SqueezeCloud::SqueezeCloudAsyncHTTP;
 
 # Defines the timeout in seconds for a http request
 use constant HTTP_TIMEOUT => 15;
@@ -152,9 +151,6 @@ sub addClientId {
 # is cached and then returned to be presented to the user. 
 sub _makeMetadata {
 	my ($json) = shift;
-
-	my $stream = addClientId(getStreamURL($json));
-	$stream =~ s/https/http/;
 
     # Get the icon from the artwork_url.
     # Get the 500x500 high quality version, as specified in SoundCloud API.
@@ -348,7 +344,7 @@ sub tracksHandler {
 		$log->debug("max: " . $max);
         $quantity = $max;
 
-		my $method = "http";
+		my $method = "https";
 		my $uid = $passDict->{'uid'} || '';
 
         # If this is set to one then the user has provided the API key. This 
@@ -426,7 +422,6 @@ sub tracksHandler {
         # top level menu items would not be visible and the search type value 
         # would not have been passed into this method here.
 		if ($authenticated && $prefs->get('apiKey')) {
-			$method = "http";
 			$params .= "&oauth_token=" . $prefs->get('apiKey');
 		} else {
 			$params .= "&client_id=$CLIENT_ID";
@@ -561,11 +556,11 @@ sub urlHandler {
 	$url =~ s/www /www./;
 
 	$url = URI::Escape::uri_escape_utf8($url);
-	my $queryUrl = "http://api.soundcloud.com/resolve.json?url=$url&client_id=$CLIENT_ID";
+	my $queryUrl = "https://api.soundcloud.com/resolve.json?url=$url&client_id=$CLIENT_ID";
     $log->debug("fetching: $queryUrl");
 
 	my $fetch = sub {
-		Plugins::SqueezeCloud::SqueezeCloudAsyncHTTP->new(
+		Slim::Networking::SimpleAsyncHTTP->new(
 			sub {
 				my $http = shift;
 				my $json = eval { from_json($http->content) };
