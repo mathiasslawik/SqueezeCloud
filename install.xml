@@ -3,7 +3,7 @@
 <extension>
 	<name>PLUGIN_SQUEEZECLOUD</name>
 	<module>Plugins::SqueezeCloud::Plugin</module>
-	<version>0.9.4</version>
+	<version>0.9.5</version>
 	<description>PLUGIN_SQUEEZECLOUD_DESC</description>
 	<icon>plugins/SqueezeCloud/html/images/icon.png</icon>
 	<defaultState>enabled</defaultState>
