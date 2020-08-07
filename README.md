@@ -8,12 +8,15 @@ Press the _Apply_ button and restart LMS.
 After installation, configure it via _Settings_ > _Advanced_ > _SqueezeCloud_
 
 The plugin is included as a default third party resource. It is distributed via my
-[personal repository](http://server.vijge.net/squeezebox/) There is no need
-to add an additional repository, because this is an official third party repository.
-However, if you want to, you can add the repository directly. A new version might be
-earlier available in this repository:
+[personal repository](http://server.vijge.net/squeezebox/) This third party repository
+is synced with the repository XML files on GitHub. It is also possible to directly include
+the repository XML from GitHub. For the release version, include
     
     http://danielvijge.github.io/SqueezeCloud/public.xml
+
+For the development version (updated with every commit), include
+
+    http://danielvijge.github.io/SqueezeCloud/public-dev.xml
 
 ## SSL support ##
 
