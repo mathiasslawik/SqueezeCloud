@@ -58,7 +58,7 @@ jobs:
 
       - name: Calculate SHA
         run: |
-          echo "SHA=$(shasum lms_mixcloud-${{ env.VERSION }}.zip | awk '{print $1;}')" >> $GITHUB_ENV
+          echo "SHA=$(shasum SqueezeCloud-${{ env.VERSION }}.zip | awk '{print $1;}')" >> $GITHUB_ENV
 
       - name: Create dev channel public XML file
         uses: cuchi/jinja2-action@v1.2.0
