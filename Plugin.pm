@@ -339,7 +339,7 @@ sub tracksHandler {
 		$log->debug("i: " . $i);
 
 		# Limit the amount of items to fetch because the API allows only a max 
-        # of 200 per response. See http://developers.soundcloud.com/docs#pagination
+        # of 200 per response. See https://developers.soundcloud.com/docs#pagination
 		my $max = min($quantity - scalar @$menu, API_MAX_ITEMS_PER_CALL);
 		$log->debug("max: " . $max);
         $quantity = $max;
@@ -470,7 +470,7 @@ sub tracksHandler {
                     $parser->($json, $menu);
                 }
 	
-				# max offset = 8000, max index = 200 sez soundcloud http://developers.soundcloud.com/docs#pagination
+				# max offset = 8000, max index = 200 sez soundcloud https://developers.soundcloud.com/docs#pagination
 				my $total = API_MAX_ITEMS + $quantity;
 				if (exists $passDict->{'total'}) {
 					$total = $passDict->{'total'}
