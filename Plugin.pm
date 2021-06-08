@@ -353,7 +353,7 @@ sub metadata_provider {
 		fetchMetadata( $client, $url );
 	}
 	
-	return defaultMeta( $client, $url );
+	return { };
 }
 
 sub urlHandler {
