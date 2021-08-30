@@ -1,12 +1,23 @@
 [% PROCESS settings/header.html %]
 
+	[% WRAPPER setting title="PLUGIN_SQUEEZECLOUD_CONNECT_WITH_SOUNDCLOUD" desc="PLUGIN_SQUEEZECLOUD_CONNECT_WITH_SOUNDCLOUD_DESC" %]
+	<script src="https://connect.soundcloud.com/sdk/sdk-3.3.2.js"></script>
+	<script>
+		SC.initialize({
+		  client_id: '112d35211af80d72c8ff470ab66400d8',
+		  redirect_uri: 'http://danielvijge.github.io/SqueezeCloud/callback.html',
+		  response_type: 'code',
+		  scope: ''
+		});
+	</script>
+	<img src="/plugins/SqueezeCloud/html/images/btn-connect-sc-l.png" alt="Connect with SoundCloud" onclick="SC.connect();" />
+
+	[% END %]
+
 	[% WRAPPER setting title="PLUGIN_SQUEEZECLOUD_APIKEY" desc="PLUGIN_SQUEEZECLOUD_APIKEY_DESC" %]
 	<div class="prefDesc">
 		<input type="text" class="stdedit" name="pref_apiKey" value="[% prefs.apiKey %]" size="40" />
-		<br/>
-		<a target="_blank" href="https://soundcloud.com/connect?client_id=112d35211af80d72c8ff470ab66400d8&redirect_uri=http%3A%2F%2Fdanielvijge.github.io%2FSqueezeCloud%2Fcallback.html&response_type=code_and_token&scope=non-expiring&display=popup">Get your apiKey for squeezecloud at soundcloud.com</a>
 	</div>
-
 	[% END %]
 
 	[% WRAPPER setting title="PLUGIN_SQUEEZECLOUD_PLAYMETHOD" desc="PLUGIN_SQUEEZECLOUD_PLAYMETHOD_DESC" %]

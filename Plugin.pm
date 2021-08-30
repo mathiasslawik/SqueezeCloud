@@ -43,7 +43,6 @@ use constant PAGE_URL_REGEXP => qr{^https?://soundcloud\.com/};
 
 my $log;
 my $compat;
-my $CLIENT_ID = "112d35211af80d72c8ff470ab66400d8";
 
 my %METADATA_CACHE= {};
 
@@ -128,23 +127,8 @@ sub defaultMeta {
 	};
 }
 
-# Adds the client ID or the API key to the end of the given URL
-sub addClientId {
-	my ($url) = shift;
-
-	my $prefix = "?";
-
-	if ($url =~ /\?/) {
-		my $prefix = "&";
-	}
-
-	my $decorated = $url . $prefix . "client_id=$CLIENT_ID";
-
-	if (0 && $prefs->get('apiKey')) {
-		my $decorated = $url . $prefix . "oauth_token=" . $prefs->get('apiKey');
-		$log->info($decorated);
-	}
-	return $decorated;
+sub getAuthenticationHeaders() {
+	return 'Authorization' => 'OAuth ' . $prefs->get('apiKey');
 }
 
 # Extracts the available metadata for a tracks from the JSON data. The data 
@@ -233,7 +217,7 @@ sub _gotMetadata {
 		requests_redirectable => [],
 	);
 
-	my $res = $ua->get( addClientId(getStreamURL($json)) );
+	my $res = $ua->get( getStreamURL($json), getAuthenticationHeaders() );
 
 	my $stream = $res->header( 'location' );
 
@@ -243,7 +227,7 @@ sub _gotMetadata {
 		my %DATA3 = %$DATA;
 		$METADATA_CACHE{$1} = \%DATA1;
 		$METADATA_CACHE{getStreamURL($json)} = \%DATA2;
-		$METADATA_CACHE{addClientId(getStreamURL($json))} = \%DATA3;
+		$METADATA_CACHE{getStreamURL($json)} = \%DATA3;
 	}
 
 	return;
@@ -283,7 +267,7 @@ sub fetchMetadata {
 			},
 		);
 
-		$http->get($queryUrl);
+		$http->get($queryUrl, getAuthenticationHeaders());
 	}
 }
 
@@ -352,7 +336,7 @@ sub tracksHandler {
 		my $authenticated = 0;
 		my $extras = '';
 
-		my $resource = "tracks.json";
+		my $resource = "tracks";
 		
         # Check the given type (defined by the passthrough array). Depending 
         # on the type certain URL parameters will be set. 
@@ -360,49 +344,49 @@ sub tracksHandler {
 			my $id = $passDict->{'pid'} || '';
 			$authenticated = 1;
 
-			$resource = "playlists/$id.json";
+			$resource = "playlists/$id";
             if ($id eq '') {
                 if ($uid ne '') {
-                    $resource = "users/$uid/playlists.json";
+                    $resource = "users/$uid/playlists";
                     $quantity = API_DEFAULT_ITEMS_COUNT;
                 }
                 elsif ($search ne '') {
-                    $resource = "playlists.json";
+                    $resource = "playlists";
                     $quantity = API_DEFAULT_ITEMS_COUNT;
                 }
                 else {
-					$resource = "me/playlists.json";
+					$resource = "me/playlists";
                     $quantity = API_DEFAULT_ITEMS_COUNT;
                 }
 			}
-			$extras = "offset=$i&limit=$quantity&";
+			$extras = "offset=$i&limit=$quantity";
 
 		} elsif ($searchType eq 'tracks') {
 			$authenticated = 1;
-			$resource = "users/$uid/tracks.json";
-			$extras = "offset=$i&limit=$quantity&";
+			$resource = "users/$uid/tracks";
+			$extras = "offset=$i&limit=$quantity";
 
 		} elsif ($searchType eq 'favorites') {
 			$authenticated = 1;
-			$resource = "users/$uid/favorites.json";
+			$resource = "users/$uid/likes/tracks";
 			if ($uid eq '') {
-				$resource = "me/favorites.json";
+				$resource = "me/likes/tracks";
 			}
-			$extras = "offset=$i&limit=$quantity&";
+			$extras = "offset=$i&limit=$quantity";
 
 		} elsif ($searchType eq 'friends') {
 			$authenticated = 1;
-			$resource = "me/followings.json";
+			$resource = "me/followings";
 			$extras = "offset=$i"; #&limit=$quantity&";
 
 		} elsif ($searchType eq 'friend') {
 			$authenticated = 1;
-			$resource = "users/$uid.json";
-			$extras = "offset=$i&limit=$quantity&";
+			$resource = "users/$uid";
+			$extras = "offset=$i&limit=$quantity";
 
 		} elsif ($searchType eq 'activities') {
 			$authenticated = 1;
-			$resource = "me/activities/all.json";
+			$resource = "me/activities";
 
 			# The activities call does not honor the offset, only the limit 
 			# parameter, which is specified by the quantity variable. Add the 
@@ -416,15 +400,6 @@ sub tracksHandler {
 
 		} else {
 			$params .= "&filter=streamable";
-		}
-
-        # Add the API key to the URL. It should be non empty otherwise certain 
-        # top level menu items would not be visible and the search type value 
-        # would not have been passed into this method here.
-		if ($authenticated && $prefs->get('apiKey')) {
-			$params .= "&oauth_token=" . $prefs->get('apiKey');
-		} else {
-			$params .= "&client_id=$CLIENT_ID";
 		}
 
         my $queryUrl = $method."://api.soundcloud.com/".$resource."?" . $extras . $params . "&" . $search;
@@ -509,7 +484,7 @@ sub tracksHandler {
 				$callback->([ { name => $_[1], type => 'text' } ]);
 			},
 			
-		)->get($queryUrl);
+		)->get($queryUrl, getAuthenticationHeaders());
 	};
 		
 	$fetch->();
@@ -556,7 +531,7 @@ sub urlHandler {
 	$url =~ s/www /www./;
 
 	$url = URI::Escape::uri_escape_utf8($url);
-	my $queryUrl = "https://api.soundcloud.com/resolve.json?url=$url&client_id=$CLIENT_ID";
+	my $queryUrl = "https://api.soundcloud.com/resolve?url=$url";
     $log->debug("fetching: $queryUrl");
 
 	my $fetch = sub {
@@ -577,7 +552,7 @@ sub urlHandler {
 				$log->warn("error: $_[1]");
 				$callback->([ { name => $_[1], type => 'text' } ]);
 			},
-		)->get($queryUrl);
+		)->get($queryUrl, getAuthenticationHeaders());
 	};
 		
 	$fetch->();
@@ -773,67 +748,68 @@ sub toplevel {
     # the method that shall be called when the user has selected the menu entry.
     # The array passthrough holds additional parameters that is passed to the 
     # method defined by the url variable.  
-	my $callbacks = [
-        # Menu entry 'Hottest tracks'
-		# No longer working in API
-		#{ name => string('PLUGIN_SQUEEZECLOUD_HOT'), type => 'link',   
-		#	url  => \&tracksHandler, passthrough => [ { params => 'order=hotness' } ], },
-
-        # Menu entry 'New tracks' 
-		{ name => string('PLUGIN_SQUEEZECLOUD_NEW'), type => 'link',   
-			url  => \&tracksHandler, passthrough => [ { params => 'order=created_at' } ], },
-
-        # Menu entry 'Search'
-		{ name => string('PLUGIN_SQUEEZECLOUD_SEARCH'), type => 'search',   
-			url  => \&tracksHandler, passthrough => [ { params => 'order=hotness' } ], },
-
-        # Menu entry 'Tags'
-		{ name => string('PLUGIN_SQUEEZECLOUD_TAGS'), type => 'search',   
-			url  => \&tracksHandler, passthrough => [ { type => 'tags', params => 'order=hotness' } ], },
-
-		# new playlists change too quickly for this to work reliably, the way xmlbrowser needs to replay the requests
-		# from the top.
-		#    { name => string('PLUGIN_SOUNDCLOUD_PLAYLIST_BROWSE'), type => 'link',
-		#		  url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists } ] },
-
-        # Menu entry 'Playlists'
-		{ name => string('PLUGIN_SQUEEZECLOUD_PLAYLIST_SEARCH'), type => 'search',
-			url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists } ] },
-	];
+	my $callbacks = [];
 
     # Add the following menu items only when the user has specified an API key
 	if ($prefs->get('apiKey') ne '') {
-		# Menu entry to show the users favorites
-		unshift(@$callbacks, 
-			{ name => string('PLUGIN_SQUEEZECLOUD_FAVORITES'), type => 'link',
-				url  => \&tracksHandler, passthrough => [ { type => 'favorites' } ] }
+
+		# Menu entry to show all activities (Stream)
+		push(@$callbacks, 
+			{ name => string('PLUGIN_SQUEEZECLOUD_ACTIVITIES'), type => 'link',
+				url  => \&tracksHandler, passthrough => [ { type => 'activities', parser => \&_parseActivities} ] }
 		);
 
-		# Menu entry to show the 'playlists' the user is following
-        unshift(@$callbacks, 
-            { name => string('PLUGIN_SQUEEZECLOUD_PLAYLISTS'), type => 'link',
-                url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists} ] },
-        );
-
 		# Menu entry to show the 'frieds' the user is following
-		unshift(@$callbacks, 
+		push(@$callbacks, 
 			{ name => string('PLUGIN_SQUEEZECLOUD_FRIENDS'), type => 'link',
 				url  => \&tracksHandler, passthrough => [ { type => 'friends', parser => \&_parseFriends} ] },
 		);
 
-		# Menu entry to show all activities (Stream)
-		unshift(@$callbacks, 
-			{ name => string('PLUGIN_SQUEEZECLOUD_ACTIVITIES'), type => 'link',
-				url  => \&tracksHandler, passthrough => [ { type => 'activities', parser => \&_parseActivities} ] }
-		);
-        
-		
-	}
+		# Menu entry to show the 'playlists' the user is following
+        push(@$callbacks, 
+            { name => string('PLUGIN_SQUEEZECLOUD_PLAYLISTS'), type => 'link',
+                url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists} ] },
+        );
 
-    # Menu entry to enter an URL manually
-	push(@$callbacks, 
-		{ name => string('PLUGIN_SQUEEZECLOUD_URL'), type => 'search', url  => \&urlHandler, }
-	);
+        # Menu entry to show the users favorites
+		push(@$callbacks, 
+			{ name => string('PLUGIN_SQUEEZECLOUD_FAVORITES'), type => 'link',
+				url  => \&tracksHandler, passthrough => [ { type => 'favorites' } ] }
+		);
+
+		# Menu entry 'New tracks'
+		push(@$callbacks,
+		{ name => string('PLUGIN_SQUEEZECLOUD_NEW'), type => 'link',   
+			url  => \&tracksHandler, passthrough => [ { params => 'order=created_at' } ], }
+		);
+
+		# Menu entry 'Search'
+		push(@$callbacks,
+		{ name => string('PLUGIN_SQUEEZECLOUD_SEARCH'), type => 'search',   
+			url  => \&tracksHandler, passthrough => [ { params => 'order=hotness' } ], }
+		);
+
+		# Menu entry 'Tags'
+		push(@$callbacks,
+		{ name => string('PLUGIN_SQUEEZECLOUD_TAGS'), type => 'search',   
+			url  => \&tracksHandler, passthrough => [ { type => 'tags', params => 'order=hotness' } ], }
+		);
+
+		# Menu entry 'Playlists'
+		push(@$callbacks,
+		{ name => string('PLUGIN_SQUEEZECLOUD_PLAYLIST_SEARCH'), type => 'search',
+			url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists } ] }
+		);
+
+		# Menu entry to enter an URL manually
+		push(@$callbacks, 
+			{ name => string('PLUGIN_SQUEEZECLOUD_URL'), type => 'search', url  => \&urlHandler, }
+		);
+	} else {
+		push(@$callbacks, 
+			{ name => string('PLUGIN_SQUEEZECLOUD_SET_API_KEY'), type => 'text' }
+		);
+	}
 
     # Add the menu entries from the menu array. It is responsible for calling 
     # the correct method (url) and passing any parameters.
