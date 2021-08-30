@@ -34,29 +34,14 @@ Slim::Player::ProtocolHandlers->registerHandler('soundcloud', __PACKAGE__);
 use strict;
 use base 'Slim::Player::Protocols::HTTP';
 
-my $CLIENT_ID = "112d35211af80d72c8ff470ab66400d8";
 my $prefs = preferences('plugin.squeezecloud');
 
 $prefs->init({ apiKey => "", playmethod => "stream" });
 
 sub canSeek { 0 }
 
-sub addClientId {
-	my ($url) = shift;
-
-	my $prefix = "?";
-
-	if ($url =~ /\?/) {
-		my $prefix = "&";		
-	}
-	
-	my $decorated = $url . $prefix . "client_id=$CLIENT_ID";
-
-	if (0 && $prefs->get('apiKey')) {
-		my $decorated = $url . $prefix . "oauth_token=" . $prefs->get('apiKey');
-		$log->info($decorated);
-	}
-	return $decorated;
+sub getAuthenticationHeaders() {
+	return 'Authorization' => 'OAuth ' . $prefs->get('apiKey');
 }
 
 sub _makeMetadata {
@@ -69,7 +54,7 @@ sub _makeMetadata {
 		artist => $json->{'user'}->{'username'},
 		album => " ",
 		#type => 'soundcloud',
-		#play => addClientId(getStreamURL($json)),
+		#play => getStreamURL($json),
 		#url  => $json->{'permalink_url'},
 		#link => "soundcloud://" . $json->{'id'},
 		bitrate   => '320kbps',
@@ -134,16 +119,17 @@ sub gotNextTrack {
 	# Save metadata for this track
 	$song->pluginData( $track );
 
-	my $stream = addClientId(getStreamURL($track));
+	my $stream = getStreamURL($track);
 	$log->info($stream);
 
 	my $ua = LWP::UserAgent->new(
 		requests_redirectable => [],
 	);
 
-	my $res = $ua->get($stream);
+	my $res = $ua->get($stream, getAuthenticationHeaders() );
 
 	my $redirector = $res->header( 'location' );
+	$log->debug('Redirecting stream to ' . $redirector);
 	$song->streamUrl($redirector);
 
 	my $meta = _makeMetadata($track);
@@ -172,7 +158,7 @@ sub getNextTrack {
 	my ($id) = $url =~ m{^soundcloud://(.*)$};
 		
 	# Talk to SN and get the next track to play
-	my $trackURL = addClientId("https://api.soundcloud.com/tracks/" . $id . ".json");
+	my $trackURL = "https://api.soundcloud.com/tracks/" . $id;
 		
 	my $http = Slim::Networking::SimpleAsyncHTTP->new(
 		\&gotNextTrack,
@@ -188,7 +174,7 @@ sub getNextTrack {
 		
 	main::DEBUGLOG && $log->is_debug && $log->debug("Getting track from soundcloud for $id");
 		
-	$http->get( $trackURL );
+	$http->get( $trackURL, getAuthenticationHeaders() );
 }
 
 # To support remote streaming (synced players, slimp3/SB1), we need to subclass Protocols::HTTP
