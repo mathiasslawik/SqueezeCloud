@@ -41,6 +41,11 @@ use constant API_MAX_ITEMS => 500;
 # Which URLs should we catch when pasted into the "Tune In URL" field?
 use constant PAGE_URL_REGEXP => qr{^https?://soundcloud\.com/};
 
+use IO::Socket::SSL;
+IO::Socket::SSL::set_defaults(
+		SSL_verify_mode => Net::SSLeay::VERIFY_NONE() 
+			) if preferences('server')->get('insecureHTTPS');
+
 my $log;
 my $compat;
 

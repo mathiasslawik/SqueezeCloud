@@ -34,6 +34,11 @@ Slim::Player::ProtocolHandlers->registerHandler('soundcloud', __PACKAGE__);
 use strict;
 use base 'Slim::Player::Protocols::HTTP';
 
+use IO::Socket::SSL;
+IO::Socket::SSL::set_defaults(
+		SSL_verify_mode => Net::SSLeay::VERIFY_NONE() 
+			) if preferences('server')->get('insecureHTTPS');
+
 my $prefs = preferences('plugin.squeezecloud');
 
 $prefs->init({ apiKey => "", playmethod => "stream" });
