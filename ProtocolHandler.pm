@@ -129,6 +129,14 @@ sub gotNextTrack {
 	my $res = $ua->get($stream, getAuthenticationHeaders() );
 
 	my $redirector = $res->header( 'location' );
+
+	if (!$redirector) {
+		$log->error('Error: Failed to get redirect location from ' . $stream);
+		$log->debug($res->status_line);
+		$http->params->{'errorCallback'}->( 'PLUGIN_SQUEEZECLOUD_STREAM_FAILED', $track->{error} );
+		return;
+	}
+
 	$log->debug('Redirecting stream to ' . $redirector);
 	$song->streamUrl($redirector);
 
