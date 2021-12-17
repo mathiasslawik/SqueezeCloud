@@ -25,6 +25,12 @@ use Slim::Utils::Strings qw(string);
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
 
+use Time::Seconds;
+
+# Use data dumper for debug logging
+use Data::Dumper;
+local $Data::Dumper::Terse = 1;
+
 # Defines the timeout in seconds for a http request
 use constant HTTP_TIMEOUT => 15;
 
@@ -43,7 +49,7 @@ use constant PAGE_URL_REGEXP => qr{^https?://soundcloud\.com/};
 
 use IO::Socket::SSL;
 IO::Socket::SSL::set_defaults(
-		SSL_verify_mode => Net::SSLeay::VERIFY_NONE() 
+		SSL_verify_mode => Net::SSLeay::VERIFY_NONE()
 			) if preferences('server')->get('insecureHTTPS');
 
 my $log;
@@ -58,9 +64,9 @@ BEGIN {
 		'category'     => 'plugin.squeezecloud',
 		'defaultLevel' => 'WARN',
 		'description'  => string('PLUGIN_SQUEEZECLOUD'),
-	});   
+	});
 
-	# Always use OneBrowser version of XMLBrowser by using server or packaged 
+	# Always use OneBrowser version of XMLBrowser by using server or packaged
 	# version included with plugin
 	if (exists &Slim::Control::XMLBrowser::findAction) {
 		$log->info("using server XMLBrowser");
@@ -82,41 +88,41 @@ $prefs->init({ apiKey => "", playmethod => "stream" });
 # This is called when squeezebox server loads the plugin.
 # It is used to initialize variables and the like.
 sub initPlugin {
-    my $class = shift;
+	my $class = shift;
 
-    # Initialize the plugin with the given values. The 'feed' is the first
-    # method called. The available menu entries will be shown in the new 
-    # menu entry 'soundcloud'. 
-    $class->SUPER::initPlugin(
-        feed   => \&toplevel,
-        tag    => 'squeezecloud',
-        menu   => 'radios',
-        is_app => $class->can('nonSNApps') ? 1 : undef,
-        weight => 10,
-    );
+	# Initialize the plugin with the given values. The 'feed' is the first
+	# method called. The available menu entries will be shown in the new
+	# menu entry 'soundcloud'.
+	$class->SUPER::initPlugin(
+		feed   => \&toplevel,
+		tag    => 'squeezecloud',
+		menu   => 'radios',
+		is_app => $class->can('nonSNApps') ? 1 : undef,
+		weight => 10,
+	);
 
-    if (!$::noweb) {
-        require Plugins::SqueezeCloud::Settings;
-        Plugins::SqueezeCloud::Settings->new;
-    }
+	if (!$::noweb) {
+		require Plugins::SqueezeCloud::Settings;
+		Plugins::SqueezeCloud::Settings->new;
+	}
 
-    Slim::Formats::RemoteMetadata->registerProvider(
-        match => qr/soundcloud\.com/,
-        func => \&metadata_provider,
-    );
+	Slim::Formats::RemoteMetadata->registerProvider(
+		match => qr/soundcloud\.com/,
+		func => \&metadata_provider,
+	);
 
-    Slim::Player::ProtocolHandlers->registerHandler(
-        soundcloud => 'Plugins::SqueezeCloud::ProtocolHandler'
-    );
+	Slim::Player::ProtocolHandlers->registerHandler(
+		soundcloud => 'Plugins::SqueezeCloud::ProtocolHandler'
+	);
 
 	Slim::Player::ProtocolHandlers->registerURLHandler(
-	    PAGE_URL_REGEXP() => 'Plugins::SqueezeCloud::ProtocolHandler'
+		PAGE_URL_REGEXP() => 'Plugins::SqueezeCloud::ProtocolHandler'
 	) if Slim::Player::ProtocolHandlers->can('registerURLHandler');
 }
 
 # Called when the plugin is stopped
 sub shutdownPlugin {
-    my $class = shift;
+	my $class = shift;
 }
 
 # Returns the name to display on the squeezebox
@@ -126,7 +132,7 @@ sub getDisplayName { 'PLUGIN_SQUEEZECLOUD' }
 # In this case only the track title that will be returned.
 sub defaultMeta {
 	my ( $client, $url ) = @_;
-	
+
 	return {
 		title => Slim::Music::Info::getCurrentTitle($url)
 	};
@@ -141,8 +147,8 @@ sub getAuthenticationHeaders() {
 sub _makeMetadata {
 	my ($json) = shift;
 
-    # Get the icon from the artwork_url.
-    # Get the 500x500 high quality version, as specified in SoundCloud API.
+	# Get the icon from the artwork_url.
+	# Get the 500x500 high quality version, as specified in SoundCloud API.
 	my $icon = "";
 	if (defined $json->{'artwork_url'}) {
 		$icon = $json->{'artwork_url'};
@@ -165,7 +171,7 @@ sub _makeMetadata {
 		cover => $icon,
 		on_select => 'play',
 	};
- 
+
 	my %DATA1 = %$DATA;
 	my %DATA2 = %$DATA;
 	my %DATA3 = %$DATA;
@@ -183,16 +189,16 @@ sub _gotMetadataError {
 	my $client = $http->params('client');
 	my $url    = $http->params('url');
 	my $error  = $http->error;
-	
+
 	$log->is_debug && $log->debug( "Error fetching Web API metadata: $error" );
-	
+
 	$client->master->pluginData( webapifetchingMeta => 0 );
-	
+
 	# To avoid flooding the SOUNDCLOUD servers in the case of errors, we just ignore further
 	# metadata for this track if we get an error
 	my $meta = defaultMeta( $client, $url );
 	$meta->{_url} = $url;
-	
+
 	$client->master->pluginData( webapimetadata => $meta );
 }
 
@@ -204,7 +210,7 @@ sub _gotMetadata {
 	my $url       = $http->params('url');
 	my $content   = $http->content;
 
-    # Check if there is an error message from the last eval() operator
+	# Check if there is an error message from the last eval() operator
 	if ( $@ ) {
 		$http->error( $@ );
 		_gotMetadataError( $http );
@@ -212,7 +218,7 @@ sub _gotMetadata {
 	}
 
 	$client->master->pluginData( webapifetchingMeta => 0 );
-		
+
 	my $json = eval { from_json($content) };
 	my $user_name = $json->{'user'}->{'username'};
 
@@ -258,10 +264,10 @@ sub fetchMetadata {
 		my $queryUrl = $url;
 		$queryUrl =~ s/\/stream/.json/;
 
-        # Call the server to fetch the data via the asynchronous http request. 
-        # The methods are called when a response was received or an error 
-        # occurred. Additional information to the http call is passed via 
-        # the hash (third parameter).
+		# Call the server to fetch the data via the asynchronous http request.
+		# The methods are called when a response was received or an error
+		# occurred. Additional information to the http call is passed via
+		# the hash (third parameter).
 		my $http = Slim::Networking::SimpleAsyncHTTP->new(
 			\&_gotMetadata,
 			\&_gotMetadataError,
@@ -280,10 +286,37 @@ sub _parseTracks {
 	my ($json, $menu) = @_;
 
 	for my $entry (@$json) {
-#		if ($entry->{'streamable'}) {
-			push @$menu, _makeMetadata($entry);
-#		}
+		#		if ($entry->{'streamable'}) {
+		push @$menu, _makeMetadata($entry);
+		#		}
 	}
+}
+
+sub friendsHandler {
+	my (undef, $callback, undef, $passthrough) = @_;
+
+	my $friendsUri = $passthrough->{'uri'} || 'https://api.soundcloud.com/me/followings';
+
+	$log->debug("fetching: $friendsUri");
+
+	my $httpRequest = Slim::Networking::SimpleAsyncHTTP->new(
+		sub {
+			my $http = shift;
+
+			my $friendsJson = eval { from_json($http->content) };
+
+			$log->debug("Friends JSON " . Dumper($friendsJson));
+
+			$callback->(createFriendsEntries($friendsJson))
+		},
+		# Called when no response was received or an error occurred.
+		sub {
+			$log->warn("error: $_[1]");
+			$callback->([ { name => $_[1], type => 'text' } ]);
+		},
+	);
+
+	return $httpRequest->get($friendsUri, getAuthenticationHeaders());
 }
 
 # Main method that is called when the user selects a menu item. It is 
@@ -293,9 +326,11 @@ sub _parseTracks {
 sub tracksHandler {
 	my ($client, $callback, $args, $passDict) = @_;
 
-    # Get the index (offset) where to start fetching items
+	$log->debug("tracksHandler() - \$passDict: " . Dumper($passDict));
+
+	# Get the index (offset) where to start fetching items
 	my $index    = ($args->{'index'} || 0); # ie, offset
-	
+
 	# The maximum amount of items to fetch
 	my $quantity = $args->{'quantity'} || API_MAX_ITEMS_PER_CALL;
 
@@ -303,8 +338,8 @@ sub tracksHandler {
 	my $searchStr = ($searchType eq 'tags') ? "tags=" : "q=";
 	my $search   = $args->{'search'} ? $searchStr . URI::Escape::uri_escape_utf8($args->{'search'}) : '';
 
-    # The parser is the method that will be called when the 
-    # server has returned some data in the SimpleAsyncHTTP call.
+	# The parser is the method that will be called when the
+	# server has returned some data in the SimpleAsyncHTTP call.
 	my $parser = $passDict->{'parser'} || \&_parseTracks;
 
 	my $params = $passDict->{'params'} || '';
@@ -313,13 +348,13 @@ sub tracksHandler {
 	$log->debug("index: " . $index);
 	$log->debug("quantity: " . $quantity);
 
-    # The new menu that will be shows when the server request has been 
-    # processed (the user has clicked something from the previous menu). 
+	# The new menu that will be shows when the server request has been
+	# processed (the user has clicked something from the previous menu).
 	my $menu = [];
-	
+
 	# fetch in stages as api only allows 50 items per response, cli clients require $quantity responses which can be more than 50
 	my $fetch;
-	
+
 	# FIXME: this could be sped up by performing parallel requests once the number of responses is known??
 
 	$fetch = sub {
@@ -327,7 +362,7 @@ sub tracksHandler {
 		my $i = $index + scalar @$menu;
 		$log->debug("i: " . $i);
 
-		# Limit the amount of items to fetch because the API allows only a max 
+		# Limit the amount of items to fetch because the API allows only a max
         # of 200 per response. See https://developers.soundcloud.com/docs#pagination
 		my $max = min($quantity - scalar @$menu, API_MAX_ITEMS_PER_CALL);
 		$log->debug("max: " . $max);
@@ -342,10 +377,13 @@ sub tracksHandler {
 		my $extras = '';
 
 		my $resource = "tracks";
-		
+
         # Check the given type (defined by the passthrough array). Depending 
         # on the type certain URL parameters will be set. 
 		if ($searchType eq 'playlists') {
+			$log->debug("tracksHandler() - sub() - \$passDict: " . Dumper($passDict));
+
+			# ERROR: $passDics->{'pid'} is always the same as the first entry
 			my $id = $passDict->{'pid'} || '';
 			$authenticated = 1;
 
@@ -393,12 +431,12 @@ sub tracksHandler {
 			$authenticated = 1;
 			$resource = "me/activities";
 
-			# The activities call does not honor the offset, only the limit 
-			# parameter, which is specified by the quantity variable. Add the 
+			# The activities call does not honor the offset, only the limit
+			# parameter, which is specified by the quantity variable. Add the
 			# limit only when it is not 1 to get all activities. This shall
 			# only be done when the user has selected the dashboard menu item.
-			# When an item from the result list is selected, omit the limit 
-			# parameter. 
+			# When an item from the result list is selected, omit the limit
+			# parameter.
             if ($quantity > 1) {
                 $extras = "limit=$quantity&";
             }
@@ -410,7 +448,7 @@ sub tracksHandler {
         my $queryUrl = $method."://api.soundcloud.com/".$resource."?" . $extras . $params . "&" . $search;
 
 		$log->debug("fetching: $queryUrl");
-		
+
 		Slim::Networking::SimpleAsyncHTTP->new(
 			# Called when a response has been received for the request.
 			sub {
@@ -428,7 +466,7 @@ sub tracksHandler {
                         }
                         $i++;
                     }
-                } 
+                }
 
                 # The activities call does not honor the offset, only the limit parameter. 
                 # If the limit is one the first entry of the activities will be returned, 
@@ -449,7 +487,7 @@ sub tracksHandler {
                     # Use the specified parser method for all other calls.
                     $parser->($json, $menu);
                 }
-	
+
 				# max offset = 8000, max index = 200 sez soundcloud https://developers.soundcloud.com/docs#pagination
 				my $total = API_MAX_ITEMS + $quantity;
 				if (exists $passDict->{'total'}) {
@@ -459,7 +497,7 @@ sub tracksHandler {
                 if ($searchType eq 'activities' && $quantity > 1) {
                     $total = $quantity;
                 }
-				
+
 				$log->info("this page: " . scalar @$menu . " total: $total");
 
 				# TODO: check this logic makes sense
@@ -467,7 +505,7 @@ sub tracksHandler {
 					$total = $index + @$menu;
 					$log->debug("short page, truncate total to $total");
 				}
-			 
+
 				# awful hack
 				if ($searchType eq 'friend' && (defined $args->{'index'})) {
 					$callback->({
@@ -488,10 +526,10 @@ sub tracksHandler {
 				$log->warn("error: $_[1]");
 				$callback->([ { name => $_[1], type => 'text' } ]);
 			},
-			
+
 		)->get($queryUrl, getAuthenticationHeaders());
 	};
-		
+
 	$fetch->();
 }
 
@@ -508,8 +546,8 @@ sub metadata_provider {
     # has been cached for the scalar in the one parenthesis set.
 	if ($url =~ /ak-media.soundcloud.com\/(.*\.mp3)/) {
 		return $METADATA_CACHE{$1};
-	} 
-	
+	}
+
 	if ( !$client->master->pluginData('webapifetchingMeta') ) {
         # The fetchMetadata method will invoke an asynchronous http request. This will 
         # start a timer that is linked with the method fetchMetadata. Kill any pending 
@@ -520,11 +558,85 @@ sub metadata_provider {
         $client->master->pluginData( webapifetchingMeta => 1 );
 		fetchMetadata( $client, $url );
 	}
-	
+
 	return { };
 }
 
-# This method is called when the user has selected the last main menu where 
+# Handler for Playlists URIs, i.e., URIs referencing a list of playlists
+#
+# For the retrieved JSON structure, see:
+# https://developers.soundcloud.com/docs/api/explorer/open-api#/users/get_users__user_id__playlists
+sub listOfPlaylistsUriHandler {
+	my (undef, $callback, undef, $passthrough) = @_;
+
+	my $uri = $passthrough->{'playlistsUri'};
+
+	my $fetch = sub {
+		Slim::Networking::SimpleAsyncHTTP->new(
+			sub {
+				my $http = shift;
+
+				my $playlistJSON = eval { from_json($http->content) };
+
+				my $items = [];
+
+				push @$items, @{_convertListOfSoundcloudPlaylistsToSlimserverPlalistsList($playlistJSON->{'collection'})};
+
+				if(defined $playlistJSON->{'next_href'}) {
+					# next_href is an URL to a cursor that can be used to retrieve the next playlists in this list
+					push @$items, {
+						name => 'more',
+						url  => \&listOfPlaylistsUriHandler,
+						passthrough => [ { playlistsUri => $playlistJSON->{'next_href'} } ]
+					}
+				}
+
+				$log->debug("listOfPlaylistsUriHandler callback with items: " . Dumper($items));
+
+				$callback->({
+					items => $items
+				});
+			},
+			sub {
+				$log->warn("error: $_[1]");
+				$callback->([ { name => $_[1], type => 'text' } ]);
+			},
+		)->get($uri, getAuthenticationHeaders());
+	};
+
+	$fetch->();
+}
+
+# Handler for Playlist URIs
+sub playlistUriHandler {
+	my (undef, $callback, undef, $passthrough) = @_;
+
+	my $uri = $passthrough->{'playlistUri'};
+
+	my $fetch = sub {
+		Slim::Networking::SimpleAsyncHTTP->new(
+			sub {
+				my $http = shift;
+
+				#JSON Structure: https://developers.soundcloud.com/docs/api/explorer/open-api#/playlists/get_playlists__playlist_id_
+				my $playlistJSON = eval { from_json($http->content) };
+
+				my $menu = [];
+
+				_parseTracks($playlistJSON->{'tracks'}, $menu);
+
+				$callback->({ items => $menu });
+			},
+			sub {
+				$log->warn("error: $_[1]");
+				$callback->([ { name => $_[1], type => 'text' } ]);
+			},
+		)->get($uri, getAuthenticationHeaders());
+	};
+
+	$fetch->();
+}
+# This method is called when the user has selected the last main menu where
 # an URL can be entered manually. It will assemble the given URL and fetch 
 # the data from the server.
 sub urlHandler {
@@ -546,7 +658,7 @@ sub urlHandler {
 				my $json = eval { from_json($http->content) };
 
 				if (exists $json->{'tracks'}) {
-					$callback->({ items => [ _parsePlaylist($json) ] });
+					$callback->({ items => [ _convertSoundcloudPlaylistEntryToSlimPlaylistEntry($json) ] });
 				} else {
 					$callback->({
 						items => [ _makeMetadata($json) ]
@@ -559,7 +671,7 @@ sub urlHandler {
 			},
 		)->get($queryUrl, getAuthenticationHeaders());
 	};
-		
+
 	$fetch->();
 }
 
@@ -570,122 +682,126 @@ sub _parsePlaylistTracks {
 	_parseTracks($json->{'tracks'}, $menu);
 }
 
-# Gets more information for the given playlist from the passed data and  
-# returns the menu item for it. 
-sub _parsePlaylist {
-	my ($entry) = @_;
-	
-	# Add information about the track count to the playlist menu item
+# Converts a Soundcloud Playlist JSON Entry to a Slimserver playlist Entry
+sub _convertSoundcloudPlaylistEntryToSlimPlaylistEntry {
+	# $entry Schema: https://developers.soundcloud.com/docs/api/explorer/open-api#/playlists/get_playlists__playlist_id_
+	my ($JSON) = @_;
+
+	$log->debug("_convertSoundcloudPlaylistEntryToSlimPlaylistEntry - \$JSON" . Dumper($JSON));
+
+	my $additionalInfo = "";
+	my $slimMenuEntry = {
+		type		=> 'playlist',
+		url         => \&playlistUriHandler,
+		passthrough => [
+			{
+				playlistUri => $JSON->{'uri'}
+			}
+		]
+	};
+
+	# ICON
+	my $icon = "";
+	if (defined $JSON->{'artwork_url'}) {
+		$icon = $JSON->{'artwork_url'};
+
+		# Replace "large" with original size
+		# For different sizes, see: https://stackoverflow.com/a/16549098
+		$icon =~ s/-large/-original/g;
+	}
+	$slimMenuEntry->{'icon'} = $icon;
+
+	# TRACK COUNT
 	my $numTracks = 0;
-	my $titleInfo = "";
-	if (exists $entry->{'tracks'} || exists $entry->{'track_count'}) {
-		$numTracks = exists $entry->{'tracks'} ? scalar(@{$entry->{'tracks'}}) : scalar($entry->{'track_count'});
-		$titleInfo .= "$numTracks " . lc(string('PLUGIN_SQUEEZECLOUD_TRACKS'));
+	if (exists $JSON->{'tracks'} || exists $JSON->{'track_count'}) {
+		$numTracks = exists $JSON->{'tracks'} ? scalar(@{$JSON->{'tracks'}}) : scalar($JSON->{'track_count'});
+		$additionalInfo .= "$numTracks " . lc(string('PLUGIN_SQUEEZECLOUD_TRACKS'));
 	}
 
-    # Add information about the playlist play time
-	my $totalSeconds = ($entry->{'duration'} || 0) / 1000;
+    # PLAY TIME
+	my $totalSeconds = ($JSON->{'duration'} || 0) / 1000;
 	if ($totalSeconds != 0) {
 		my $minutes = int($totalSeconds / 60);
 		my $seconds = $totalSeconds % 60;
         if ($numTracks > 0) {
-            $titleInfo .= ", ";
+            $additionalInfo .= ", ";
         }
-		$titleInfo .= "${minutes}m${seconds}s";
+		$additionalInfo .= "${minutes}m${seconds}s";
 	}
 
-    # Get the icon from the artwork_url. If no url is defined, set the default icon.
-    my $icon = "";
-    if (defined $entry->{'artwork_url'}) {
-        $icon = $entry->{'artwork_url'};
-        $icon =~ s/-large/-t500x500/g;
-    }
+    # TITLE
+    my $title = $JSON->{'title'};
+	$title .= " ($additionalInfo)";
+	$slimMenuEntry->{'name'} = $title;
 
-    # Get the title and add the additional information to it
-    my $title = $entry->{'title'};
-	$title .= " ($titleInfo)";	
+	$log->debug("_convertSoundcloudPlaylistEntryToSlimPlaylistEntry - return: " . Dumper($slimMenuEntry));
 
-    # Create the menu array
-	return {
-		name => $title,
-		type => 'playlist',
-		icon => $icon,
-		url => \&tracksHandler,
-		passthrough => [ { type => 'playlists', pid => $entry->{'id'}, parser => \&_parsePlaylistTracks }],
-	};
+	return $slimMenuEntry;
 }
 
-# Parses the available playlists from the JSON array and gets the information 
-# for each playlist. Each playlist will be added as a separate menu entry.
-sub _parsePlaylists {
-	my ($json, $menu) = @_;
+# Converts a list of Soundcloud JSON playlists to a Slimserver playlist of playlists
+sub _convertListOfSoundcloudPlaylistsToSlimserverPlalistsList {
+	# Should be a JSON array
+	my ($json) = @_;
+
+	my $menu = [];
+
 	for my $entry (@$json) {
-		push @$menu, _parsePlaylist($entry);
+		push @$menu, _convertSoundcloudPlaylistEntryToSlimPlaylistEntry($entry);
 	}
+
+	return $menu;
 }
 
-# Shows the three available menu entries favorites, tracks and playlists 
-# with the received count information for a selected friend. 
-sub _parseFriend {
-	my ($entry, $menu) = @_;
-
-	my $image = $entry->{'avatar_url'};
-	my $name = $entry->{'full_name'} || $entry->{'username'};
-	my $favorite_count = $entry->{'public_favorites_count'};
-	my $track_count = $entry->{'track_count'};
-	my $playlist_count = $entry->{'playlist_count'};
-	my $id = $entry->{'id'};
-
-	if ($favorite_count > 0) {
-        push @$menu, {
-    		name => string('PLUGIN_SQUEEZECLOUD_FAVORITES'),
-    		type => 'playlist',
-    		url => \&tracksHandler,
-    		passthrough => [ { type => 'favorites', uid => $id, max => $favorite_count }],
-    	};
-    }
-
-	if ($track_count > 0) {
-        push @$menu, {
-    		name => string('PLUGIN_SQUEEZECLOUD_TRACKS'),
-    		type => 'playlist',
-    		url => \&tracksHandler,
-    		passthrough => [ { type => 'tracks', uid => $id, max => $track_count }],
-    	};
-    }
-
-	if ($playlist_count > 0) {
-        push @$menu, {
-    		name => string('PLUGIN_SQUEEZECLOUD_PLAYLISTS'),
-    		type => 'link',
-    		url => \&tracksHandler,
-    		passthrough => [ { type => 'playlists', uid => $id, max => $playlist_count,
-    		parser => \&_parsePlaylists } ]
-    	};
-    }
-}
-
-# Goes through the list of available friends from the JSON data and parses the 
+# Goes through the list of available friends from the JSON data and parses the
 # information for each friend (which is defined in the parseFriend method). 
 # Each friend is added as a separate menu entry.
-sub _parseFriends {
-	my ($json, $menu) = @_;
+sub createFriendsEntries {
+	my ($json) = @_;
+
+	my $menu = [];
 
 	for my $entry (@{$json->{'collection'}}) {
 		my $image = $entry->{'avatar_url'};
 		my $name = $entry->{'full_name'} || $entry->{'username'};
-		my $id = $entry->{'id'};
+		my $favorite_count = $entry->{'public_favorites_count'};
+		my $track_count = $entry->{'track_count'};
+		my $playlist_count = $entry->{'playlist_count'};
 
-        # Add the menu entry with the information for one friend.
-		push @$menu, {
-			name => $name,
-			icon => $image,
+		my $friendEntries = [];
+
+		if ($favorite_count > 0) {
+			push @$friendEntries, {
+				name => string('PLUGIN_SQUEEZECLOUD_FAVORITES')
+			};
+		}
+
+		if ($track_count > 0) {
+			push @$friendEntries, {
+				name => string('PLUGIN_SQUEEZECLOUD_TRACKS'),
+			};
+		}
+
+		if ($playlist_count > 0) {
+			push @$friendEntries, {
+				name        => string('PLUGIN_SQUEEZECLOUD_PLAYLISTS'),
+				url         => \&listOfPlaylistsUriHandler,
+				passthrough => [ { playlistsUri => $entry->{'uri'} . '/playlists?access=playable&show_tracks=false&limit=20&linked_partitioning=true' } ]
+			};
+		}
+
+		my $friendEntry = {
+			name  => $name,
+			icon  => $image,
 			image => $image,
-			type => 'link',
-			url => \&tracksHandler,
-			passthrough => [ { type => 'friend', uid => $id, parser => \&_parseFriend} ]
+			type  => "playlist",
+			items => $friendEntries
 		};
+
+		push @$menu, $friendEntry
 	}
+
+	return($menu);
 }
 
 # Parses the given data. If the data is a playlist the number of tracks and 
@@ -700,7 +816,7 @@ sub _parseActivity {
     my $type = $entry->{'type'};
 
     if ($type =~ /playlist.*/) {
-        my $playlistItem = _parsePlaylist($origin);
+        my $playlistItem = _convertSoundcloudPlaylistEntryToSlimPlaylistEntry($origin);
         my $user = $origin->{'user'};
         my $user_name = $user->{'full_name'} || $user->{'username'};
 
@@ -748,75 +864,77 @@ sub playerMenu { shift->can('nonSNApps') ? undef : 'RADIO' }
 sub toplevel {
 	my ($client, $callback, $args) = @_;
 
-    # These are the available main menus. The variable type defines the menu 
+    # These are the available main menus. The variable type defines the menu
     # type (search allows text input, link opens another menu), the url defines
     # the method that shall be called when the user has selected the menu entry.
-    # The array passthrough holds additional parameters that is passed to the 
-    # method defined by the url variable.  
+    # The array passthrough holds additional parameters that is passed to the
+    # method defined by the url variable.
 	my $callbacks = [];
 
     # Add the following menu items only when the user has specified an API key
 	if ($prefs->get('apiKey') ne '') {
 
 		# Menu entry to show all activities (Stream)
-		push(@$callbacks, 
+		push(@$callbacks,
 			{ name => string('PLUGIN_SQUEEZECLOUD_ACTIVITIES'), type => 'link',
 				url  => \&tracksHandler, passthrough => [ { type => 'activities', parser => \&_parseActivities} ] }
 		);
 
-		# Menu entry to show the 'frieds' the user is following
-		push(@$callbacks, 
-			{ name => string('PLUGIN_SQUEEZECLOUD_FRIENDS'), type => 'link',
-				url  => \&tracksHandler, passthrough => [ { type => 'friends', parser => \&_parseFriends} ] },
+		# Menu entry to show the 'friends' the user is following
+		push(@$callbacks,
+			{
+				name        => string('PLUGIN_SQUEEZECLOUD_FRIENDS'),
+				url         => \&friendsHandler
+			}
 		);
 
 		# Menu entry to show the 'playlists' the user is following
-        push(@$callbacks, 
+        push(@$callbacks,
             { name => string('PLUGIN_SQUEEZECLOUD_PLAYLISTS'), type => 'link',
-                url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists} ] },
+                url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_convertListOfSoundcloudPlaylistsToSlimserverPlalistsList} ] },
         );
 
         # Menu entry to show the users favorites
-		push(@$callbacks, 
+		push(@$callbacks,
 			{ name => string('PLUGIN_SQUEEZECLOUD_FAVORITES'), type => 'link',
 				url  => \&tracksHandler, passthrough => [ { type => 'favorites' } ] }
 		);
 
 		# Menu entry 'New tracks'
 		push(@$callbacks,
-		{ name => string('PLUGIN_SQUEEZECLOUD_NEW'), type => 'link',   
+		{ name => string('PLUGIN_SQUEEZECLOUD_NEW'), type => 'link',
 			url  => \&tracksHandler, passthrough => [ { params => 'order=created_at' } ], }
 		);
 
 		# Menu entry 'Search'
 		push(@$callbacks,
-		{ name => string('PLUGIN_SQUEEZECLOUD_SEARCH'), type => 'search',   
+		{ name => string('PLUGIN_SQUEEZECLOUD_SEARCH'), type => 'search',
 			url  => \&tracksHandler, passthrough => [ { params => 'order=hotness' } ], }
 		);
 
 		# Menu entry 'Tags'
 		push(@$callbacks,
-		{ name => string('PLUGIN_SQUEEZECLOUD_TAGS'), type => 'search',   
+		{ name => string('PLUGIN_SQUEEZECLOUD_TAGS'), type => 'search',
 			url  => \&tracksHandler, passthrough => [ { type => 'tags', params => 'order=hotness' } ], }
 		);
 
 		# Menu entry 'Playlists'
 		push(@$callbacks,
 		{ name => string('PLUGIN_SQUEEZECLOUD_PLAYLIST_SEARCH'), type => 'search',
-			url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_parsePlaylists } ] }
+			url  => \&tracksHandler, passthrough => [ { type => 'playlists', parser => \&_convertListOfSoundcloudPlaylistsToSlimserverPlalistsList } ] }
 		);
 
 		# Menu entry to enter an URL manually
-		push(@$callbacks, 
+		push(@$callbacks,
 			{ name => string('PLUGIN_SQUEEZECLOUD_URL'), type => 'search', url  => \&urlHandler, }
 		);
 	} else {
-		push(@$callbacks, 
+		push(@$callbacks,
 			{ name => string('PLUGIN_SQUEEZECLOUD_SET_API_KEY'), type => 'text' }
 		);
 	}
 
-    # Add the menu entries from the menu array. It is responsible for calling 
+    # Add the menu entries from the menu array. It is responsible for calling
     # the correct method (url) and passing any parameters.
 	$callback->($callbacks);
 }
