@@ -305,8 +305,6 @@ sub friendsHandler {
 
 			my $friendsJson = eval { from_json($http->content) };
 
-			$log->debug("Friends JSON " . Dumper($friendsJson));
-
 			$callback->(createFriendsEntries($friendsJson))
 		},
 		# Called when no response was received or an error occurred.
@@ -325,8 +323,6 @@ sub friendsHandler {
 # differentiate what shall be done in here.
 sub tracksHandler {
 	my ($client, $callback, $args, $passDict) = @_;
-
-	$log->debug("tracksHandler() - \$passDict: " . Dumper($passDict));
 
 	# Get the index (offset) where to start fetching items
 	my $index    = ($args->{'index'} || 0); # ie, offset
@@ -381,9 +377,7 @@ sub tracksHandler {
         # Check the given type (defined by the passthrough array). Depending 
         # on the type certain URL parameters will be set. 
 		if ($searchType eq 'playlists') {
-			$log->debug("tracksHandler() - sub() - \$passDict: " . Dumper($passDict));
-
-			# ERROR: $passDics->{'pid'} is always the same as the first entry
+			# Previous error: $passDics->{'pid'} is always the same as the first entry
 			my $id = $passDict->{'pid'} || '';
 			$authenticated = 1;
 
@@ -562,7 +556,9 @@ sub metadata_provider {
 	return { };
 }
 
-# Handler for Playlists URIs, i.e., URIs referencing a list of playlists
+# Handler for Playlists URIs, i.e., URIs referencing a list of playlists.
+#
+# This handler calls itself recursively to retrieve the list of playlists linked through next_href
 #
 # For the retrieved JSON structure, see:
 # https://developers.soundcloud.com/docs/api/explorer/open-api#/users/get_users__user_id__playlists
@@ -583,24 +579,31 @@ sub listOfPlaylistsUriHandler {
 				push @$items, @{_convertListOfSoundcloudPlaylistsToSlimserverPlalistsList($playlistJSON->{'collection'})};
 
 				if(defined $playlistJSON->{'next_href'}) {
-					# next_href is an URL to a cursor that can be used to retrieve the next playlists in this list
-					push @$items, {
-						name => 'more',
-						url  => \&listOfPlaylistsUriHandler,
-						passthrough => [ { playlistsUri => $playlistJSON->{'next_href'} } ]
-					}
+					my $nextItemsReceiver = sub {
+						my ($callbackResult) = @_;
+
+						push @$items, @{$callbackResult->{ 'items' }};
+
+						$callback->({
+							items => $items
+						})
+					};
+
+					# Recursion call to fetch the next playlists
+					listOfPlaylistsUriHandler(undef, \&{$nextItemsReceiver}, undef, { playlistsUri => $playlistJSON->{'next_href'} })
+				} else {
+					$callback->({
+						items => $items
+					});
 				}
-
-				$log->debug("listOfPlaylistsUriHandler callback with items: " . Dumper($items));
-
-				$callback->({
-					items => $items
-				});
 			},
 			sub {
 				$log->warn("error: $_[1]");
 				$callback->([ { name => $_[1], type => 'text' } ]);
 			},
+			{
+				cache => 1
+			}
 		)->get($uri, getAuthenticationHeaders());
 	};
 
@@ -630,7 +633,7 @@ sub playlistUriHandler {
 			sub {
 				$log->warn("error: $_[1]");
 				$callback->([ { name => $_[1], type => 'text' } ]);
-			},
+			}
 		)->get($uri, getAuthenticationHeaders());
 	};
 
@@ -687,29 +690,36 @@ sub _convertSoundcloudPlaylistEntryToSlimPlaylistEntry {
 	# $entry Schema: https://developers.soundcloud.com/docs/api/explorer/open-api#/playlists/get_playlists__playlist_id_
 	my ($JSON) = @_;
 
-	$log->debug("_convertSoundcloudPlaylistEntryToSlimPlaylistEntry - \$JSON" . Dumper($JSON));
-
 	my $additionalInfo = "";
 	my $slimMenuEntry = {
 		type		=> 'playlist',
 		url         => \&playlistUriHandler,
 		passthrough => [
 			{
-				playlistUri => $JSON->{'uri'}
+				playlistUri => $JSON->{'uri'} . '?access=playable'
 			}
 		]
 	};
 
-	# ICON
-	my $icon = "";
+	# IMAGE - use either the playlist artwork or the first artwork found in the tracks or the users artwork
+	my $IMAGE = "";
 	if (defined $JSON->{'artwork_url'}) {
-		$icon = $JSON->{'artwork_url'};
-
 		# Replace "large" with original size
 		# For different sizes, see: https://stackoverflow.com/a/16549098
-		$icon =~ s/-large/-original/g;
+		$IMAGE = $JSON->{'artwork_url'} =~ s/-large/-original/gr;
+	} elsif (defined $JSON->{'tracks'}) {
+		while( my( $index, $track ) = each( @{$JSON->{'tracks'}} ) )
+		{
+			if( defined $track->{'artwork_url'} )
+			{
+				$IMAGE = $track->{'artwork_url'} =~ s/-large/-t500x500/gr;
+				last;
+			}
+		}
+	} elsif ($IMAGE eq "" && defined $JSON->{'user'}->{'avatar_url'}) {
+		$IMAGE = $JSON->{'user'}->{'avatar_url'} =~ s/-large/-t500x500/gr;
 	}
-	$slimMenuEntry->{'icon'} = $icon;
+	$slimMenuEntry->{'image'} = $IMAGE;
 
 	# TRACK COUNT
 	my $numTracks = 0;
@@ -733,8 +743,6 @@ sub _convertSoundcloudPlaylistEntryToSlimPlaylistEntry {
     my $title = $JSON->{'title'};
 	$title .= " ($additionalInfo)";
 	$slimMenuEntry->{'name'} = $title;
-
-	$log->debug("_convertSoundcloudPlaylistEntryToSlimPlaylistEntry - return: " . Dumper($slimMenuEntry));
 
 	return $slimMenuEntry;
 }
@@ -784,9 +792,9 @@ sub createFriendsEntries {
 
 		if ($playlist_count > 0) {
 			push @$friendEntries, {
-				name        => string('PLUGIN_SQUEEZECLOUD_PLAYLISTS'),
+				name        => string('PLUGIN_SQUEEZECLOUD_PLAYLISTS') . " ($playlist_count)",
 				url         => \&listOfPlaylistsUriHandler,
-				passthrough => [ { playlistsUri => $entry->{'uri'} . '/playlists?access=playable&show_tracks=false&limit=20&linked_partitioning=true' } ]
+				passthrough => [ { playlistsUri => $entry->{'uri'} . '/playlists?access=playable&linked_partitioning=true' } ]
 			};
 		}
 
