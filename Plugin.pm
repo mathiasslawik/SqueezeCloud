@@ -731,17 +731,20 @@ sub _convertSoundcloudPlaylistEntryToSlimPlaylistEntry {
     # PLAY TIME
 	my $totalSeconds = ($JSON->{'duration'} || 0) / 1000;
 	if ($totalSeconds != 0) {
-		my $minutes = int($totalSeconds / 60);
+		my $hours = int( $totalSeconds / (60*60) );
+		my $minutes = int( $totalSeconds / 60) % 60;
 		my $seconds = $totalSeconds % 60;
+
         if ($numTracks > 0) {
             $additionalInfo .= ", ";
         }
-		$additionalInfo .= "${minutes}m${seconds}s";
+
+		$additionalInfo .= sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
 	}
 
     # TITLE
     my $title = $JSON->{'title'};
-	$title .= " ($additionalInfo)";
+	$title .= " \r\n$additionalInfo, ♡$JSON->{'likes_count'}";
 	$slimMenuEntry->{'name'} = $title;
 
 	return $slimMenuEntry;
