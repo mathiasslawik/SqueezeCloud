@@ -694,6 +694,7 @@ sub _convertSoundcloudPlaylistEntryToSlimPlaylistEntry {
 	my $slimMenuEntry = {
 		type		=> 'playlist',
 		url         => \&playlistUriHandler,
+		on_select 	=> 'play',
 		passthrough => [
 			{
 				playlistUri => $JSON->{'uri'} . '?access=playable'
