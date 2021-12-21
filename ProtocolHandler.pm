@@ -25,6 +25,10 @@ use Slim::Utils::Errno;
 use Slim::Utils::Cache;
 use Scalar::Util qw(blessed);
 
+# Use data dumper for debug logging
+use Data::Dumper;
+local $Data::Dumper::Terse = 1;
+
 my $log   = logger('plugin.squeezecloud');
 
 my %fetching; # hash of ids we are fetching metadata for to avoid multiple fetches
@@ -43,16 +47,19 @@ my $prefs = preferences('plugin.squeezecloud');
 
 $prefs->init({ apiKey => "", playmethod => "stream" });
 
+# TODO: Fix seeking by refreshing the Soundcloud CDN MP3 URL as this URL contains an access policy that expires after some time, thus preventing seeking
 sub canSeek { 0 }
 
 sub getAuthenticationHeaders() {
 	return 'Authorization' => 'OAuth ' . $prefs->get('apiKey');
 }
 
-sub _makeMetadata {
+sub _convertJSONToSlimMetadata {
 	my ($json) = shift;
 
-	my $DATA = {
+	my $betterArtwork = getBetterArtworkURL($json->{'artwork_url'} || "");
+
+	return {
 		duration => int($json->{'duration'} / 1000),
 		name => $json->{'title'},
 		title => $json->{'title'},
@@ -65,20 +72,20 @@ sub _makeMetadata {
 		bitrate   => '320kbps',
 		type      => 'MP3 (SoundCloud)',
 		#info_link => $json->{'permalink_url'},
-		icon => getBetterArtworkURL($json->{'artwork_url'} || ""),
-		image => getBetterArtworkURL($json->{'artwork_url'} || ""),
-		cover => getBetterArtworkURL($json->{'artwork_url'} || ""),
+		icon => $betterArtwork,
+		image => $betterArtwork,
+		cover => $betterArtwork
 	};
 }
 
-sub getStreamURL {
-	my $json = shift;
+sub extractDownloadOrStreamUrlFromJsonTrackInfo {
+	my $jsonTrackInfo = shift;
 
-	if ($prefs->get('playmethod') eq 'download' && exists($json->{'download_url'}) && defined($json->{'download_url'}) && $json->{'downloadable'} eq '1') {
-		return $json->{'download_url'};
+	if ($prefs->get('playmethod') eq 'download' && exists($jsonTrackInfo->{'download_url'}) && defined($jsonTrackInfo->{'download_url'}) && $jsonTrackInfo->{'downloadable'} eq '1') {
+		return $jsonTrackInfo->{'download_url'};
 	}
 	else {
-		return $json->{'stream_url'};
+		return $jsonTrackInfo->{'stream_url'};
 	}
 }
 
@@ -92,67 +99,75 @@ sub getFormatForURL () { 'mp3' }
 
 sub isRemote { 1 }
 
+# TODO: Check if we could simplify gotNextTrack by using scanURL (see for example scanUrl in Podcasts protocol handler)
 sub scanUrl {
 	my ($class, $url, $args) = @_;
 	$args->{cb}->( $args->{song}->currentTrack() );
 }
 
+# Next track handler.
+# To get the "real" streaming URL from the Soundcloud CDN, we need to make an authenticated request to the
+# stream/download URL contained in the track JSON and use the URL in the HTTP Location header for playing.
 sub gotNextTrack {
 	my $http   = shift;
+
 	my $client = $http->params->{client};
-	my $song   = $http->params->{song};     
-	my $url    = $song->currentTrack()->url;
-	my $track  = eval { from_json( $http->content ) };
+	my $song   = $http->params->{song};
+	my $successCb = $http->params->{successCb};
+	my $errorCb = $http->params->{errorCb};
 
-	if ( $@ || $track->{error} ) {
+	my $jsonTrackInfo  = eval { from_json( $http->content ) };
 
+	if ( $@ || $jsonTrackInfo->{error} ) {
 		# We didn't get the next track to play
 		if ( $log->is_warn ) {
-			$log->warn( 'Soundcloud error getting next track: ' . ( $@ || $track->{error} ) );
+			$log->warn( 'Soundcloud error getting next track: ' . ( $@ || $jsonTrackInfo->{error} ) );
 		}
 
 		if ( $client->playingSong() ) {
 			$client->playingSong()->pluginData( {
-				songName => $@ || $track->{error},
+				songName => $@ || $jsonTrackInfo->{error},
 			} );
 		}
 	
-		$http->params->{'errorCallback'}->( 'PLUGIN_SQUEEZECLOUD_NO_INFO', $track->{error} );
+		$errorCb->( 'PLUGIN_SQUEEZECLOUD_NO_INFO', $jsonTrackInfo->{error} );
 		return;
 	}
 	
-	# Save metadata for this track
-	$song->pluginData( $track );
+	# Save JSON track info for this track
+	$song->pluginData( $jsonTrackInfo );
 
-	my $stream = getStreamURL($track);
-	$log->info($stream);
+	my $soundcloudStreamURL = extractDownloadOrStreamUrlFromJsonTrackInfo($jsonTrackInfo);
 
-	my $ua = LWP::UserAgent->new(
+	# TODO: Check the dedicated API for retrieving the stream URLs (https://api.soundcloud.com/tracks/{track_id}/streams)
+	# Although, it does not support downloads, even with the current way of handling downloads, the API does not
+	# guarantee that the download file format is playable or streaming-friendly.
+	my $userAgent = LWP::UserAgent->new(
 		requests_redirectable => [],
 	);
 
-	my $res = $ua->get($stream, getAuthenticationHeaders() );
+	my $streamUrlHttpResponse = $userAgent->get($soundcloudStreamURL, getAuthenticationHeaders() );
+	my $locationHeader = $streamUrlHttpResponse->header( 'location' );
 
-	my $redirector = $res->header( 'location' );
-
-	if (!$redirector) {
-		$log->error('Error: Failed to get redirect location from ' . $stream);
-		$log->debug($res->status_line);
-		$http->params->{'errorCallback'}->( 'PLUGIN_SQUEEZECLOUD_STREAM_FAILED', $track->{error} );
+	if (!$locationHeader) {
+		$log->error('Error: Failed to get redirect location header from ' . $soundcloudStreamURL);
+		$log->debug($streamUrlHttpResponse->status_line);
+		$http->params->{'errorCallback'}->( 'PLUGIN_SQUEEZECLOUD_STREAM_FAILED', $jsonTrackInfo->{error} );
 		return;
 	}
 
-	$log->debug('Redirecting stream to ' . $redirector);
-	$song->streamUrl($redirector);
+	$log->debug('Setting Stream URL to Soundcloud CDN URL ' . $locationHeader);
+	$song->streamUrl($locationHeader);
 
-	my $meta = _makeMetadata($track);
-	$song->duration( $meta->{duration} );
+	my $slimMetaInformation = _convertJSONToSlimMetadata($jsonTrackInfo);
+
+	$song->duration( $slimMetaInformation->{duration} );
 
 	my $cache = Slim::Utils::Cache->new;
-	$log->info("setting ". 'soundcloud_meta_' . $track->{id});
-	$cache->set( 'soundcloud_meta_' . $track->{id}, $meta, 86400 );
+	$log->info("setting ". 'soundcloud_meta_' . $jsonTrackInfo->{id});
+	$cache->set( 'soundcloud_meta_' . $jsonTrackInfo->{id}, $slimMetaInformation, 86400 );
 
-	$http->params->{callback}->();
+	$successCb->();
 }
 
 sub gotNextTrackError {
@@ -179,8 +194,8 @@ sub getNextTrack {
 		{
 			client        => $client,
 			song          => $song,
-			callback      => $successCb,
-			errorCallback => $errorCb,
+			successCb	  => $successCb,
+			errorCb       => $errorCb,
 			timeout       => 35,
 		},
 	);
@@ -229,64 +244,65 @@ sub trackInfoURL {
 	$log->info("trackInfoURL: " . $url);
 }
 
-use Data::Dumper;
-# Metadata for a URL, used by CLI/JSON clients
+# Returns metadata for a soundcloud URL. This method is called quite often to poll data by clients, therefore we use
+# caching to speed things up. Additionally, we check all playlist items if their metadata has already been fetched
+# and fetch it if not.
 sub getMetadataFor {
 	my ( $class, $client, $url ) = @_;
-	
-	return {} unless $url;
 
-	#$log->info("metadata: " . $url);
+	#log->debug("getMetadataFor $url");
+
+	return {} unless $url;
 
 	my $icon = $class->getIcon();
 	my $cache = Slim::Utils::Cache->new;
 
 	# If metadata is not here, fetch it so the next poll will include the data
 	my ($trackId) = $url =~ m{soundcloud://(.+)};
-	#$log->info("looking for  ". 'soundcloud_meta_' . $trackId );
+
 	my $meta      = $cache->get( 'soundcloud_meta_' . $trackId );
-
-	if ( !$meta && !$client->master->pluginData('fetchingMeta') ) {
+	if ( !defined $meta) {
 		# Go fetch metadata for all tracks on the playlist without metadata
-		my @need;
-
 		for my $track ( @{ Slim::Player::Playlist::playList($client) } ) {
 			my $trackURL = blessed($track) ? $track->url : $track;
+
 			if ( $trackURL =~ m{soundcloud://(.+)} ) {
 				my $id = $1;
+
 				if ( !$cache->get("soundcloud_meta_$id") ) {
-					push @need, $id;
+					if ( main::DEBUGLOG && $log->is_debug ) {
+						$log->debug( "Need to fetch metadata for: $id");
+					}
+
+					if(!$client->master->pluginData( "fetchingMeta$id")) {
+						$client->master->pluginData( "fetchingMeta$id" => 1);
+
+						my $fetch = sub {
+							Slim::Networking::SimpleAsyncHTTP->new(
+								sub {
+									my $http = shift;
+									my $jsonTrackInfo = eval { from_json($http->content) };
+									my $slimMetaInformation = _convertJSONToSlimMetadata($jsonTrackInfo);
+
+									$log->info("setting ". 'soundcloud_meta_' . $jsonTrackInfo->{id});
+									$cache->set( 'soundcloud_meta_' . $jsonTrackInfo->{id}, $slimMetaInformation, 86400 );
+
+									$client->master->pluginData( "fetchingMeta$id" => 0);
+								},
+								sub {
+									$log->warn("error: $_[1]");
+
+									$client->master->pluginData( "fetchingMeta$id" => 0);
+								},
+							)->get("https://api.soundcloud.com/tracks/$id", getAuthenticationHeaders());
+						};
+
+						$fetch->();
+					}
 				}
 			}
 		}
-		
-		if ( main::DEBUGLOG && $log->is_debug ) {
-			$log->debug( "Need to fetch metadata for: " . join( ', ', @need ) );
-		}
-		
-		# $client->master->pluginData( fetchingMeta => 1 );
-		
-		# my $metaUrl = Slim::Networking::SqueezeNetwork->url(
-		# 	"/api/classical/v1/playback/getBulkMetadata"
-		# );
-		
-		# my $http = Slim::Networking::SqueezeNetwork->new(
-		# 	\&_gotBulkMetadata,
-		# 	\&_gotBulkMetadataError,
-		# 	{
-		# 			client  => $client,
-		# 			timeout => 60,
-		# 	},
-		# );
-
-		# $http->post(
-		# 	$metaUrl,
-		# 	'Content-Type' => 'application/x-www-form-urlencoded',
-		# 	'trackIds=' . join( ',', @need ),
-		# );
 	}
-
-	#$log->debug( "Returning metadata for: $url" . ($meta ? '' : ': default') );
 
 	return $meta || {
 		bitrate   => '320kbps',
